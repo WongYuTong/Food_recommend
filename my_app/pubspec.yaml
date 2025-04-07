@@ -1,0 +1,40 @@
+name: my_app
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_native_splash: ^2.4.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/google_logo.png
+    - assets/logo.png
+    - assets/chat_icon.png
+    - assets/home_icon.png
+    - assets/location_icon.png
+    - assets/account_icon.png
+    - assets/menu_icon.png
+    - assets/search_icon.png
+
+flutter_native_splash:
+  color: "#CEC4F4" # 啟動畫面背景顏色
+  image: assets/logo.png # 啟動畫面圖片
+  android: true # 啟用 Android 啟動畫面
+  ios: true # 啟用 iOS 啟動畫面
+  fullscreen: true # 啟動全屏模式
+  android_gravity: center # 圖片顯示方式（居中）
+  ios_content_mode: center # iOS 圖片顯示方式（居中）
