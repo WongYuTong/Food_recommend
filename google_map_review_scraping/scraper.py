@@ -333,192 +333,12 @@ def fetch_reviews(driver, store_name, reviews, store_id=None):
     except Exception as e:
         logging.error(f"抓取評論時出錯：{e}")
 
-def fetch_intro_info(driver, store_name, keyword):
-    """抓取店家簡介信息"""
-    csv_file = "store_intros.csv"
+def fetch_intro_info(driver, store_name, google_map_url, json_path="store_intros.json"):
+    """
+    只抓取店家簡介內容，並寫入 store_intros.json 的對應店家（以 google_map_url 為 key）之 "簡介" 欄位。
+    """
     try:
-        if not os.path.exists(csv_file):
-            with open(csv_file, mode='w', newline='', encoding='utf-8-sig') as file:
-                writer = csv.writer(file)
-                writer.writerow(["編號", "店名", "地址", "經緯度", "營業時間", "官方網站", "店家簡述", "簡介", "關鍵字", "星數", "價位", "圖片檔案名稱", "是否已完成"])
-
-        store_brief = "無簡述"
-        intro_text = []
-        address = "無地址"
-        coordinates = "無經緯度"
-        business_hours = "無營業時間"
-        website = "無官方網站"
-        rating = "無星數"
-        price_level = "無價位資訊"
-        image_filename = ""
-        is_completed = "未完成"  # 預設為未完成
-
-        # 先獲取店家編號，這樣可以用於圖片命名與檢查是否已完成
-        next_id = get_next_id(csv_file, keyword)
-
-        # 檢查店家是否已經在資料庫中，且是否已完成抓取
-        if os.path.exists(csv_file):
-            with open(csv_file, mode='r', encoding='utf-8-sig') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    if row["編號"] == next_id:
-                        if row["是否已完成"] == "已完成":
-                            logging.info(f"店家 {store_name}（編號：{next_id}）已完成評論抓取，跳過。")
-                            return  # 如果已完成，直接返回，不再處理
-                        else:
-                            logging.info(f"店家 {store_name}（編號：{next_id}）未完成評論抓取，直接進行評論抓取。")
-                            try:
-                                open_reviews(driver)
-                                sort_reviews_by_latest(driver)
-                                scroll_reviews(driver, store_name, pause_time=3, batch_size=50, store_id=next_id)
-                                logging.info(f"完成抓取店家 {store_name} 的評論。")
-                            except Exception as e:
-                                logging.error(f"抓取評論時出錯：{e}")
-                            return  # 完成評論抓取後返回
-
-        # 創建圖片資料夾
-        img_dir = "img"
-        if not os.path.exists(img_dir):
-            os.makedirs(img_dir)
-
-        try:
-            # 尋找主要圖片元素
-            img_element = driver.find_element(By.CSS_SELECTOR, 'img[src*="googleusercontent.com"]')
-            if img_element:
-                img_url = img_element.get_attribute('src')
-                if img_url:
-                    # 使用店家編號作為圖片檔案名稱
-                    image_filename = f"{next_id}.jpg"
-                    img_path = os.path.join(img_dir, image_filename)
-                    # 下載圖片
-                    try:
-                        response = requests.get(img_url)
-                        if response.status_code == 200:
-                            with open(img_path, 'wb') as f:
-                                f.write(response.content)
-                            logging.info(f"已保存店家圖片：{image_filename}")
-                        else:
-                            logging.error(f"下載圖片失敗，狀態碼：{response.status_code}")
-                            image_filename = ""
-                    except Exception as e:
-                        logging.error(f"下載圖片時出錯：{e}")
-                        image_filename = ""
-        except NoSuchElementException:
-            logging.info("未找到店家圖片")
-
-        try:
-            rating_element = driver.find_element(By.CSS_SELECTOR, 'div.F7nice span[aria-hidden="true"]')
-            if rating_element:
-                rating = rating_element.text
-                logging.info(f"找到店家星數：{rating}")
-        except NoSuchElementException:
-            logging.info("未找到店家星數")
-
-        # 抓取分類標籤
-        category_keywords = set()
-        try:
-            category_buttons = driver.find_elements(By.CSS_SELECTOR, 'button.DkEaL')
-            for button in category_buttons:
-                category_text = button.text.strip()
-                if category_text:
-                    category_keywords.add(category_text)
-                    logging.info(f"找到分類標籤：{category_text}")
-        except NoSuchElementException:
-            logging.info("未找到分類標籤")
-        except Exception as e:
-            logging.error(f"抓取分類標籤時出錯：{e}")
-
-        try:
-            price_element = driver.find_element(By.CSS_SELECTOR, 'span.mgr77e span[aria-label^="價格"]')
-            if price_element:
-                price_level = price_element.get_attribute('aria-label').replace('價格: ', '')
-                logging.info(f"找到店家價位：{price_level}")
-        except NoSuchElementException:
-            logging.info("未找到店家價位")
-
-        try:
-            address_element = driver.find_element(By.CSS_SELECTOR, 'div.Io6YTe.fontBodyMedium')
-            if address_element:
-                address = address_element.text
-                logging.info(f"找到店家地址：{address}")
-        except NoSuchElementException:
-            logging.info("未找到店家地址")
-
-        try:
-            current_url = driver.current_url
-            logging.info(f"當前URL：{current_url}")
-            coords_match = re.search(r'!3d([\d.]+)!4d([\d.]+)', current_url)
-            if coords_match:
-                lat, lng = coords_match.groups()
-                coordinates = f"{lat},{lng}"
-                logging.info(f"找到店家經緯度：{coordinates}")
-        except Exception as e:
-            logging.error(f"獲取經緯度時出錯：{e}")
-
-        if os.path.exists(csv_file):
-            found_duplicate = False
-            rows = []
-            store_id_to_use = next_id
-            is_already_completed = False
-            with open(csv_file, mode='r', encoding='utf-8-sig') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    if (row['店名'] == store_name and 
-                        row['經緯度'] == coordinates and 
-                        row['地址'] == address):
-                        # 檢查關鍵字是否已存在
-                        existing_keywords = set()
-                        if row['關鍵字']:
-                            existing_keywords = set(row['關鍵字'].split(','))
-                        # 添加搜尋關鍵字
-                        if keyword not in existing_keywords:
-                            existing_keywords.add(keyword)
-                        # 添加分類標籤關鍵字
-                        existing_keywords.update(category_keywords)
-                        # 更新關鍵字欄位
-                        row['關鍵字'] = ','.join(sorted(existing_keywords))
-                        # 記錄該店家的編號和完成狀態
-                        store_id_to_use = row['編號']
-                        is_already_completed = row['是否已完成'] == "已完成"
-                        found_duplicate = True
-                    rows.append(row)
-            if found_duplicate:
-                # 重寫整個文件以更新關鍵字
-                with open(csv_file, mode='w', newline='', encoding='utf-8-sig') as file:
-                    writer = csv.DictWriter(file, fieldnames=reader.fieldnames)
-                    writer.writeheader()
-                    writer.writerows(rows)
-                logging.info(f"發現重複店家：{store_name}，已更新關鍵字")
-                # 如果店家已標記為完成，則跳過
-                if is_already_completed:
-                    logging.info(f"店家 {store_name}（編號：{store_id_to_use}）已完成評論抓取，跳過。")
-                    return
-                # 如果店家未完成，則繼續抓取評論
-                logging.info(f"店家 {store_name}（編號：{store_id_to_use}）未完成評論抓取，繼續抓取評論。")
-                try:
-                    open_reviews(driver)
-                    sort_reviews_by_latest(driver)
-                    scroll_reviews(driver, store_name, pause_time=3, batch_size=50, store_id=store_id_to_use)
-                    logging.info(f"完成抓取店家 {store_name} 的評論。")
-                except Exception as e:
-                    logging.error(f"抓取評論時出錯：{e}")
-                return
-        time.sleep(random.uniform(1.5, 2.5))
-        try:
-            hours_element = driver.find_element(By.CSS_SELECTOR, 'div[aria-label*="星期"]')
-            if hours_element:
-                business_hours = hours_element.get_attribute('aria-label')
-                business_hours = business_hours.split('. ')[0]
-                logging.info(f"找到營業時間：{business_hours}")
-        except NoSuchElementException:
-            logging.info("未找到營業時間")
-        try:
-            website_element = driver.find_element(By.CSS_SELECTOR, 'a.CsEnBe[data-item-id="authority"]')
-            if website_element:
-                website = website_element.get_attribute('href')
-                logging.info(f"找到官方網站：{website}")
-        except NoSuchElementException:
-            logging.info("未找到官方網站")
+        # 先點擊簡介按鈕
         try:
             intro_button = WebDriverWait(driver, 5).until(
                 EC.element_to_be_clickable((By.XPATH, '//button[contains(@aria-label, "簡介")]'))
@@ -527,22 +347,20 @@ def fetch_intro_info(driver, store_name, keyword):
             time.sleep(1)
         except (NoSuchElementException, TimeoutException):
             logging.info(f"{store_name} 找不到簡介按鈕，跳過...")
-            with open(csv_file, mode='a', newline='', encoding='utf-8-sig') as file:
-                writer = csv.writer(file)
-                writer.writerow([next_id, store_name, address, coordinates, business_hours, website, "無簡述", "無詳細簡介", keyword, rating, price_level, image_filename, is_completed])
             return
-        try:
-            hlvsq_element = driver.find_element(By.CSS_SELECTOR, 'div.PbZDve span.HlvSq')
-            if hlvsq_element:
-                store_brief = hlvsq_element.text
-                logging.info(f"找到店家簡短描述：{store_brief}")
-        except NoSuchElementException:
-            logging.info("未找到店家簡短描述，將繼續抓取其他簡介內容")
+
+        # 滾動簡介區塊
         try:
             scrollable_div = WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, 'div.m6QErb.DxyBCb.kA9KIf.dS8AEf.XiKgde'))
             )
             scroll_intro_section(driver, scrollable_div)
+        except TimeoutException:
+            logging.info(f"{store_name} 沒有找到簡介內容")
+
+        # 抓取簡介內容
+        intro_text = []
+        try:
             intro_blocks = driver.find_elements(By.CLASS_NAME, 'iP2t7d')
             for block in intro_blocks:
                 try:
@@ -551,28 +369,29 @@ def fetch_intro_info(driver, store_name, keyword):
                         intro_text.append(content)
                 except Exception as e:
                     logging.error(f"處理簡介塊時出錯：{e}")
-        except TimeoutException:
-            logging.info(f"{store_name} 沒有找到簡介內容")
-        logging.info(f"簡介內容：{intro_text}")
-        formatted_intro = format_intro_content(intro_text) if intro_text else "無詳細簡介"
-        with open(csv_file, mode='a', newline='', encoding='utf-8-sig') as file:
-            writer = csv.writer(file)
-            # 合併關鍵字
-            all_keywords = set([keyword])  # 加入搜尋關鍵字
-            all_keywords.update(category_keywords)  # 加入分類標籤關鍵字
-            keywords_str = ','.join(sorted(all_keywords))
-            writer.writerow([next_id, store_name, address, coordinates, business_hours, website, store_brief, formatted_intro, keywords_str, rating, price_level, image_filename, is_completed])
-            logging.info(f"已保存 {store_name} 的所有信息，編號：{next_id}")
-        time.sleep(1)
-        try:
-            open_reviews(driver)
-            sort_reviews_by_latest(driver)
-            scroll_reviews(driver, store_name, pause_time=3, batch_size=50, store_id=next_id)
-            logging.info(f"完成抓取店家 {store_name} 的評論。")
         except Exception as e:
-            logging.error(f"抓取評論時出錯：{e}")
+            logging.error(f"抓取簡介內容時出錯：{e}")
+        formatted_intro = format_intro_content(intro_text) if intro_text else "無詳細簡介"
+
+        # 更新 json
+        with open(json_path, 'r', encoding='utf-8') as f:
+            stores = json.load(f)
+        updated = False
+        for store in stores:
+            if store.get("店家google map網址") == google_map_url:
+                store["簡介"] = formatted_intro
+                store["是否已完成"] = "已完成"
+                updated = True
+                break
+        if updated:
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(stores, f, ensure_ascii=False, indent=2)
+            logging.info(f"已更新 {store_name} 的簡介內容。")
+        else:
+            logging.warning(f"找不到對應店家（網址: {google_map_url}），無法寫入簡介。")
+        time.sleep(1)
     except Exception as e:
-        logging.error(f"抓取 {store_name} 信息時出錯：{e}", exc_info=True)
+        logging.error(f"抓取 {store_name} 簡介時出錯：{e}", exc_info=True)
 
 def scroll_intro_section(driver, scrollable_div, max_scrolls=10, max_no_change_attempts=1, pause_time=1):
     """滾動簡介區塊"""
@@ -643,3 +462,79 @@ def update_completion_status(store_id, status, reason=""):
             logging.warning(f"找不到對應店家（編號: {store_id}），無法更新狀態。")
     except Exception as e:
         logging.error(f"更新完成狀態時出錯：{e}", exc_info=True) 
+
+def fetch_places_from_api(town_json_path=None, keywords="", api_key="", radius=2000, output_json="store_intros.json", lat=None, lng=None):
+    """
+    根據 town.json 內容或直接給定經緯度與 keywords，呼叫 Google Place API 取得店家資訊，並存入 store_intros.json。
+    """
+    import json
+    import requests
+    import logging
+
+    all_places = []
+    place_ids = set()
+
+    # 如果有 lat/lng，直接查詢
+    if lat is not None and lng is not None:
+        locations = [(lat, lng)]
+    else:
+        # 否則讀取 town_json_path
+        if not town_json_path or not os.path.exists(town_json_path):
+            logging.error(f"找不到 {town_json_path}")
+            return
+        with open(town_json_path, 'r', encoding='utf-8') as f:
+            towns = json.load(f)
+            if isinstance(towns, dict):
+                towns = [towns]
+            locations = [(t['latitude'], t['longitude']) for t in towns]
+
+    for lat, lng in locations:
+        location = f"{lat},{lng}"
+        url = (
+            f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
+            f"location={location}&radius={radius}&keyword={keywords}&language=zh-TW&key={api_key}"
+        )
+        try:
+            resp = requests.get(url)
+            data = resp.json()
+            if data.get('status') != 'OK':
+                logging.warning(f"API 回傳非 OK: {data.get('status')}, {data.get('error_message', '')}")
+                continue
+            for result in data.get('results', []):
+                place_id = result.get('place_id')
+                if place_id in place_ids:
+                    continue
+                place_ids.add(place_id)
+                # 取得詳細資料
+                detail_url = (
+                    f"https://maps.googleapis.com/maps/api/place/details/json?"
+                    f"place_id={place_id}&language=zh-TW&fields="
+                    f"place_id,name,formatted_address,geometry,opening_hours,website,types,business_status,rating,price_level,photos,url&key={api_key}"
+                )
+                detail_resp = requests.get(detail_url)
+                detail = detail_resp.json().get('result', {})
+                # 組合欄位
+                place_info = {
+                    "編號": detail.get('place_id', ''),
+                    "店名": detail.get('name', ''),
+                    "地址": detail.get('formatted_address', ''),
+                    "經緯度": f"{detail.get('geometry', {}).get('location', {}).get('lat', '')},{detail.get('geometry', {}).get('location', {}).get('lng', '')}",
+                    "營業時間": '\n'.join(detail.get('opening_hours', {}).get('weekday_text', [])) if detail.get('opening_hours') else '',
+                    "官方網站": detail.get('website', ''),
+                    "店家簡述": ','.join(detail.get('types', [])),
+                    "星數": detail.get('rating', ''),
+                    "價位": detail.get('price_level', ''),
+                    "營業狀態": detail.get('business_status', ''),
+                    "店家圖片": f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={detail.get('photos', [{}])[0].get('photo_reference', '')}&key={api_key}" if detail.get('photos') else '',
+                    "店家google map網址": detail.get('url', ''),
+                    "搜尋關鍵字": keywords,
+                    "簡介": "無",
+                    "是否已完成": "未完成"
+                }
+                all_places.append(place_info)
+        except Exception as e:
+            logging.error(f"呼叫 Google Place API 發生錯誤: {e}")
+    # 寫入 json
+    with open(output_json, 'w', encoding='utf-8') as f:
+        json.dump(all_places, f, ensure_ascii=False, indent=2)
+    logging.info(f"已將 {len(all_places)} 筆店家資訊寫入 {output_json}")
