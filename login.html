@@ -1,4 +1,3 @@
-<!-- login.html - 登入頁面（還原為原本的設計） -->
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -6,9 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登入</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* 若你尚未加入這些樣式，也可以直接寫在這邊 */
+        .google-login-btn {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 15px;
+            text-align: left;
+            width: 100%;
+            height: 40px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .google-login-btn:hover {
+            background-color: #ddd;
+        }
+
+        .google-icon {
+            height: 20px;
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <header id="navbar-container"></header>
+
     <!-- 登入區塊 -->
     <section class="login-container">
         <h2>用戶登入</h2>
@@ -17,11 +44,16 @@
             <input type="password" id="password" placeholder="密碼" required>
             <button type="submit" class="login-btn">登入</button>
         </form>
+
         <div class="login-options">
             <button id="registerBtn">創建帳號</button>
-            <button id="emailLoginBtn">郵箱登入</button>
+            <button id="emailLoginBtn" class="google-login-btn">
+                <img src="images/google.png" alt="Google icon" class="google-icon">
+                <span>Google登入</span>
+            </button>
         </div>
     </section>
+
     <script src="script.js"></script>
 </body>
 </html>
