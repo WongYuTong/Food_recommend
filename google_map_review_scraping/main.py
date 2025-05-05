@@ -1,98 +1,74 @@
 import sys
 import logging
-import json
 from utils import initialize_driver
-from scraper import open_url, click_update_results_checkbox, fetch_store_links, fetch_intro_info
+from scraper import open_url, click_update_results_checkbox, fetch_store_links, fetch_intro_info, fetch_places_from_api, open_reviews, sort_reviews_by_latest, scroll_reviews
 import time
-import random
+import json
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
-    keywords = "火鍋"
-    
-    # 讀取town.json文件
-    try:
-        with open('town.json', 'r', encoding='utf-8') as f:
-            town_data = json.load(f)
-    except FileNotFoundError:
-        logging.error("找不到town.json文件")
-        return
-    except json.JSONDecodeError:
-        logging.error("town.json文件格式錯誤")
-        return
-    
-    # 篩選台北市的鄉鎮區
-    taipei_districts = []
-    for town in town_data:
-        if town.get('CountyName') == '臺北市':
-            taipei_districts.append({
-                'DistrictName': town.get('TownName'),
-                'latitude': town.get('latitude'),
-                'longitude': town.get('longitude')
-            })
-    
-    # 跳過前六個區域，取剩下的區域
-    seen_districts = set()
-    remaining_districts = []
-    
-    # 先記錄前六個區域
-    for district in taipei_districts:
-        if district['DistrictName'] not in seen_districts and len(seen_districts) < 6:
-            seen_districts.add(district['DistrictName'])
-    
-    # 取得剩下的區域
-    for district in taipei_districts:
-        if district['DistrictName'] not in seen_districts:
-            remaining_districts.append(district)
-            seen_districts.add(district['DistrictName'])
-    
-    logging.info(f"將要抓取以下 {len(remaining_districts)} 個區域的資料：{[d['DistrictName'] for d in remaining_districts]}")
-    
-    driver = initialize_driver()
-    all_store_links = set()  # 使用集合來儲存不重複的店家連結
-    
-    try:
-        # 第一次搜尋時設置更新結果選項
-        url = f"https://www.google.com/maps/search/{keywords}"
-        open_url(driver, url)
-        click_update_results_checkbox(driver)
-        time.sleep(1)
-        
-        # 對每個鄉鎮區進行搜尋
-        for district in remaining_districts:
-            logging.info(f"開始搜尋 {district['DistrictName']} 的{keywords}店家")
-            url = f"https://www.google.com/maps/search/{keywords}"
-            open_url(driver, url)
-            
-            # 獲取該區域的店家連結
-            district_links = fetch_store_links(
-                driver, 
-                keywords,
-                district['latitude'],
-                district['longitude'],
-                15  # 使用更大的縮放級別以獲取更精確的結果
-            )
-            
-            # 將新的連結加入總集合中（自動去除重複項）
-            all_store_links.update(district_links)
-            logging.info(f"{district['DistrictName']} 新增 {len(district_links)} 個店家，目前共有 {len(all_store_links)} 個不重複店家")
-            time.sleep(2)
-        
-        # 處理所有收集到的店家連結
-        for store_link in all_store_links:
-            driver.get(store_link)
-            store_name = driver.title.split(' - ')[0]
-            fetch_intro_info(driver, store_name, keywords)
-            logging.info(f"完成抓取店家 {store_name} 的評論與簡介。")
-            time.sleep(random.uniform(1, 3))
-            
-    except Exception as e:
-        logging.error(f"錯誤：{e}")
-    finally:
-        driver.quit()
+    keywords = "火鍋"  # 你可以根據需求修改
+    town_json_path = "town.json"
+    api_key = ""    
+    store_json = "store_intros.json"
+
+    # 第一步：呼叫 Google Place API 取得店家資訊
+    with open(town_json_path, "r", encoding="utf-8") as f:
+        towns = json.load(f)
+
+    # 篩選臺北市的前六筆鄉鎮區
+    target_towns = [t for t in towns if t["CountyName"] == "臺北市"][:6]
+
+    for town in target_towns:
+        lat = town["latitude"]
+        lng = town["longitude"]
+        output_json = f"store_intros_{town['TownName']}.json"
+        # 1. 先抓這一區的店家資訊
+        fetch_places_from_api(
+            town_json_path=None,
+            keywords=keywords,
+            api_key=api_key,
+            radius=2000,
+            output_json=output_json,
+            lat=lat,
+            lng=lng
+        )
+        # 2. 針對這一區的店家抓簡介與評論
+        with open(output_json, 'r', encoding='utf-8') as f:
+            stores = json.load(f)
+        driver = initialize_driver()
+        try:
+            for store in stores:
+                if store.get("是否已完成") == "已完成":
+                    continue
+                url = store.get("店家google map網址")
+                store_name = store.get("店名")
+                store_id = store.get("編號")
+                if not url:
+                    logging.warning(f"{store_name} 沒有 Google Map 網址，跳過")
+                    continue
+                driver.get(url)
+                time.sleep(2)
+                fetch_intro_info(driver, store_name, url, json_path=store_json)
+                logging.info(f"完成抓取店家 {store_name} 的簡介。")
+                time.sleep(1)
+                # 抓取評論流程
+                try:
+                    open_reviews(driver)
+                    sort_reviews_by_latest(driver)
+                    scroll_reviews(driver, store_name, pause_time=3, batch_size=50, store_id=store_id)
+                    logging.info(f"完成抓取店家 {store_name} 的評論。")
+                except Exception as e:
+                    logging.error(f"抓取評論時出錯：{e}")
+                time.sleep(1)
+        except Exception as e:
+            logging.error(f"錯誤：{e}")
+        finally:
+            driver.quit()
 
 if __name__ == "__main__":
     main() 
