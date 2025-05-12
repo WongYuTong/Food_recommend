@@ -10,6 +10,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import os
 from django.conf import settings
+from .food_controller import FoodRecommendationController
+from .models import QueryHistory
+import traceback
 
 # Create your views here.
 
@@ -20,39 +23,65 @@ def chat_room(request):
 @login_required
 def send_message(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        user_message = data.get('message')
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message')
+            print(f"收到使用者訊息: {user_message}")
+            
+            # 保存使用者訊息
+            message = Message.objects.create(
+                user=request.user,
+                content=user_message,
+                is_bot_response=False
+            )
+            
+            try:
+                # 使用美食推薦控制器處理查詢
+                controller = FoodRecommendationController()
+                bot_response = controller.process_query(user_message)
+                
+                # 記錄查詢歷史
+                try:
+                    analysis = controller.analyze_query(user_message)
+                    tools_used = ",".join(analysis.get("tools", []))
+                    QueryHistory.objects.create(
+                        user=request.user,
+                        query_text=user_message,
+                        response_text=bot_response,
+                        tools_used=tools_used
+                    )
+                except Exception as e:
+                    print(f"記錄查詢歷史時出錯: {str(e)}")
+            except Exception as e:
+                # 處理控制器可能的錯誤
+                bot_response = f"很抱歉，處理您的請求時發生錯誤: {str(e)}"
+                print(f"控制器錯誤: {str(e)}")
+            
+            # 保存機器人回覆
+            bot_message = Message.objects.create(
+                user=request.user,
+                content=bot_response,
+                is_bot_response=True
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'user_message': {
+                    'id': message.id,
+                    'content': message.content,
+                    'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M')
+                },
+                'bot_response': {
+                    'id': bot_message.id,
+                    'content': bot_response,
+                    'timestamp': bot_message.timestamp.strftime('%Y-%m-%d %H:%M')
+                }
+            })
         
-        # 保存用戶消息
-        message = Message.objects.create(
-            user=request.user,
-            content=user_message,
-            is_bot_response=False
-        )
-        
-        # 模擬AI回覆 (在實際應用中，這裡會調用AI模型)
-        bot_response = f"感謝您的訊息！這是關於'{user_message}'的美食推薦回覆。"
-        
-        # 保存機器人回覆
-        bot_message = Message.objects.create(
-            user=request.user,
-            content=bot_response,
-            is_bot_response=True
-        )
-        
-        return JsonResponse({
-            'status': 'success',
-            'user_message': {
-                'id': message.id,
-                'content': message.content,
-                'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M')
-            },
-            'bot_response': {
-                'id': bot_message.id,
-                'content': bot_message.content,
-                'timestamp': bot_message.timestamp.strftime('%Y-%m-%d %H:%M')
-            }
-        })
+        except Exception as e:
+            print(f"處理訊息時發生錯誤: {str(e)}")
+            traceback.print_exc()  # 打印完整堆棧跟踪
+            return JsonResponse({'status': 'error', 'message': f'處理請求時出錯: {str(e)}'}, status=500)
     
     return JsonResponse({'status': 'error', 'message': '方法不允許'}, status=405)
 
