@@ -137,4 +137,7 @@ LOGIN_URL = '/user/login/'
 LOGIN_REDIRECT_URL = '/chat/'
 
 # Google Places API 設置
-GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY')
+GOOGLE_PLACES_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY")
+GOOGLE_SEARCH_API_KEY = os.environ.get("GOOGLE_SEARCH_API_KEY")
+GOOGLE_CX_ID = os.environ.get("GOOGLE_CX_ID")
+GPT_API_KEY = os.environ.get("GPT_API_KEY")

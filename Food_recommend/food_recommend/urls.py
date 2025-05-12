@@ -22,8 +22,9 @@ from django.views.generic.base import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('chat.urls')),
+    path('chat/', include('chat.urls')),
     path('user/', include('user.urls')),
+    path('', RedirectView.as_view(url='/chat/chat_room/', permanent=False)),
 ]
 
 if settings.DEBUG:
