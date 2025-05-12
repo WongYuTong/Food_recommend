@@ -289,7 +289,7 @@
             
             // 發送請求到後端
             $.ajax({
-                url: '/chat/room/assistant/',
+                url: '/chat/send_message/',
                 type: 'POST',
                 headers: {
                     'X-CSRFToken': csrftoken,
@@ -304,7 +304,7 @@
                     removeLoading(loadingId);
                     
                     // 顯示助手回應
-                    appendMessage('assistant', response.message);
+                    appendMessage('assistant', response.bot_response.content);
                     
                     // 自動滾動到底部
                     scrollToBottom();
@@ -314,7 +314,7 @@
                     removeLoading(loadingId);
                     
                     // 顯示錯誤訊息
-                    appendMessage('assistant', '抱歉，我遇到了一些問題。請稍後再試。');
+                    appendMessage('assistant', '發生錯誤：' + error);
                     console.error('Error:', error);
                     
                     // 自動滾動到底部
