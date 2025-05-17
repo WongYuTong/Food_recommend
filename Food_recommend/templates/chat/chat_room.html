@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+
 {% block title %}聊天室 - 美食推薦小幫手{% endblock %}
 
 {% block extra_css %}
@@ -171,6 +172,192 @@
         color: #666;
         margin-bottom: 25px;
     }
+    
+    /* 餐廳卡片相關樣式 */
+    .restaurant-cards {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 10px 0;
+        margin: 15px 0;
+        gap: 15px;
+        scrollbar-width: thin;
+        scrollbar-color: #76b900 #f0f2f5;
+    }
+    
+    .restaurant-cards::-webkit-scrollbar {
+        height: 8px;
+    }
+    
+    .restaurant-cards::-webkit-scrollbar-track {
+        background: #f0f2f5;
+        border-radius: 10px;
+    }
+    
+    .restaurant-cards::-webkit-scrollbar-thumb {
+        background-color: #76b900;
+        border-radius: 10px;
+    }
+    
+    .restaurant-card {
+        flex: 0 0 auto;
+        width: 280px;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e0e0e0;
+        background-color: white;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .restaurant-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    .card-header {
+        background-color: #76b900;
+        color: white;
+        padding: 12px 15px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    .card-info {
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .card-info i {
+        width: 20px;
+        margin-right: 8px;
+        color: #666;
+    }
+    
+    .card-rating {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+        margin-right: 8px;
+    }
+    
+    .price-level {
+        color: #43a047;
+        font-weight: bold;
+    }
+    
+    .card-status {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+    
+    .status-open {
+        background-color: #e8f5e9;
+        color: #43a047;
+        border: 1px solid #43a047;
+    }
+    
+    .status-closed {
+        background-color: #ffebee;
+        color: #e53935;
+        border: 1px solid #e53935;
+    }
+    
+    .card-action {
+        text-align: center;
+        margin-top: 10px;
+    }
+    
+    .card-action .btn {
+        width: 100%;
+        border-radius: 20px;
+    }
+    
+    /* 料理類型標籤樣式 */
+    .cuisine-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    
+    .cuisine-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        background-color: #f0f8ff;
+        color: #0066cc;
+        border: 1px solid #0066cc;
+    }
+    
+    /* 餐廳描述樣式 */
+    .card-description {
+        border-left: 3px solid #76b900;
+        padding-left: 8px;
+        margin: 10px 0;
+    }
+    
+    /* 按鈕樣式優化 */
+    .card-actions .btn {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+    
+    /* 餐廳照片樣式 */
+    .card-img {
+        width: 100%;
+        height: 140px;
+        overflow: hidden;
+    }
+    
+    .restaurant-photo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+    
+    .restaurant-card:hover .restaurant-photo {
+        transform: scale(1.05);
+    }
+    
+    /* 評論摘要樣式 */
+    .card-reviews {
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        padding: 8px;
+    }
+    
+    .review-content {
+        max-height: 120px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+    }
+    
+    .review-item {
+        color: #555;
+        font-style: italic;
+    }
+    
+    .review-item:last-child {
+        border-bottom: none !important;
+    }
 </style>
 {% endblock %}
 
@@ -267,11 +454,186 @@
         
         const csrftoken = getCookie('csrftoken');
         
+        // 用戶地理位置
+        let userLocation = {
+            latitude: null,
+            longitude: null
+        };
+        
+        // 請求用戶位置權限
+        function requestGeolocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        userLocation.latitude = position.coords.latitude;
+                        userLocation.longitude = position.coords.longitude;
+                        console.log("獲取位置成功:", userLocation);
+                    },
+                    function(error) {
+                        console.error("獲取位置錯誤:", error.message);
+                    }
+                );
+            } else {
+                console.error("瀏覽器不支持地理位置功能");
+            }
+        }
+        
+        // 頁面加載時請求位置權限
+        requestGeolocation();
+        
         // 用戶資料變數
         const userPreferences = {
             favoriteFoods: "{{ user.profile.favorite_foods|default:'None' }}",
             foodRestrictions: "{{ user.profile.food_restrictions|default:'None' }}"
         };
+        
+        // 生成餐廳卡片 HTML
+        function generateRestaurantCards(restaurants) {
+            if (!restaurants || restaurants.length === 0) return '';
+            
+            let cardsHTML = '<div class="restaurant-cards">';
+            
+            restaurants.forEach(restaurant => {
+                // 處理評分星星
+                const rating = parseFloat(restaurant.rating) || 0;
+                const fullStars = Math.floor(rating);
+                const halfStar = rating % 1 >= 0.5;
+                
+                let starsHTML = '';
+                for (let i = 0; i < 5; i++) {
+                    if (i < fullStars) {
+                        starsHTML += '<i class="fas fa-star"></i>';
+                    } else if (i === fullStars && halfStar) {
+                        starsHTML += '<i class="fas fa-star-half-alt"></i>';
+                    } else {
+                        starsHTML += '<i class="far fa-star"></i>';
+                    }
+                }
+                
+                // 處理價格等級
+                let priceHTML = '';
+                if (restaurant.price_level !== null) {
+                    for (let i = 0; i <= restaurant.price_level; i++) {
+                        priceHTML += '$';
+                    }
+                } else {
+                    priceHTML = '價格未知';
+                }
+                
+                // 處理營業狀態
+                const statusClass = restaurant.is_open ? 'status-open' : 'status-closed';
+                const statusText = restaurant.is_open ? '營業中' : '已休息';
+                
+                // 處理料理類型標籤
+                let cuisineTagsHTML = '';
+                if (restaurant.types && restaurant.types.length > 0) {
+                    const relevantTypes = restaurant.types
+                        .filter(type => !['point_of_interest', 'establishment', 'food', 'restaurant'].includes(type))
+                        .slice(0, 3);
+                    
+                    if (relevantTypes.length > 0) {
+                        cuisineTagsHTML = `<div class="cuisine-tags mb-2">`;
+                        relevantTypes.forEach(type => {
+                            cuisineTagsHTML += `<span class="cuisine-tag">${type}</span>`;
+                        });
+                        cuisineTagsHTML += `</div>`;
+                    }
+                }
+                
+                // 整理評論概述
+                let reviewsOverview = '';
+                if (restaurant.reviews && restaurant.reviews.length > 0) {
+                    reviewsOverview = `
+                    <div class="card-reviews mt-2 mb-2">
+                        <h6 class="small text-muted mb-1"><i class="fas fa-comment-alt me-1"></i>顧客評價摘要</h6>
+                        <div class="review-content small">
+                    `;
+                    
+                    // 取前2則評論
+                    const topReviews = restaurant.reviews.slice(0, 2);
+                    topReviews.forEach(review => {
+                        const reviewText = review.text && review.text.length > 60 ? 
+                            review.text.substring(0, 60) + '...' : 
+                            review.text || '此用戶沒有留下評論內容';
+                            
+                        reviewsOverview += `
+                        <div class="review-item mb-1 pb-1 border-bottom">
+                            <p class="mb-0">${reviewText}</p>
+                        </div>
+                        `;
+                    });
+                    
+                    reviewsOverview += `</div></div>`;
+                }
+                
+                // 獲取地圖URL
+                const mapUrl = restaurant.url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ' ' + restaurant.address)}`;
+                
+                // 獲取導航URL (適用於手機)
+                const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(restaurant.name + ' ' + restaurant.address)}`;
+                
+                // 處理照片URL
+                const photoUrl = restaurant.photo_url || '/static/images/default_food.jpg';
+                
+                cardsHTML += `
+                    <div class="restaurant-card">
+                        <div class="card-header">${restaurant.name}</div>
+                        <div class="card-img">
+                            <img src="${photoUrl}" alt="${restaurant.name}" class="restaurant-photo">
+                        </div>
+                        <div class="card-body">
+                            <div class="card-status ${statusClass}">${statusText}</div>
+                            
+                            ${cuisineTagsHTML}
+                            
+                            <div class="card-rating">
+                                <div class="rating-stars">${starsHTML}</div>
+                                <div><strong>${restaurant.rating}</strong> (${restaurant.total_ratings || 0})</div>
+                            </div>
+                            
+                            <div class="card-info">
+                                <i class="fas fa-dollar-sign"></i>
+                                <span class="price-level">${priceHTML}</span>
+                            </div>
+                            
+                            <div class="card-info">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${restaurant.address}</span>
+                            </div>
+                            
+                            ${restaurant.phone ? `
+                            <div class="card-info">
+                                <i class="fas fa-phone-alt"></i>
+                                <span>${restaurant.phone}</span>
+                            </div>
+                            ` : ''}
+                            
+                            ${reviewsOverview}
+                            
+                            <div class="card-actions mt-3 d-flex justify-content-between">
+                                <a href="${mapUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-map me-1"></i>查看地圖
+                                </a>
+                                <a href="${navUrl}" target="_blank" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-directions me-1"></i>導航前往
+                                </a>
+                            </div>
+                            
+                            ${restaurant.website ? `
+                            <div class="mt-2">
+                                <a href="${restaurant.website}" target="_blank" class="btn btn-sm btn-outline-secondary w-100">
+                                    <i class="fas fa-external-link-alt me-1"></i>查看官網
+                                </a>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            cardsHTML += '</div>';
+            return cardsHTML;
+        }
         
         // 發送訊息函數
         function sendMessage() {
@@ -297,14 +659,16 @@
                 },
                 data: JSON.stringify({
                     'message': userInput,
-                    'preferences': userPreferences
+                    'preferences': userPreferences,
+                    'location': userLocation
                 }),
                 success: function(response) {
                     // 移除加載中
                     removeLoading(loadingId);
                     
-                    // 顯示助手回應
-                    appendMessage('assistant', response.bot_response.content);
+                    // 顯示助手回應和餐廳卡片(如有)
+                    const responseData = response.bot_response;
+                    appendMessage('assistant', responseData.content, responseData.place_cards);
                     
                     // 自動滾動到底部
                     scrollToBottom();
@@ -353,7 +717,7 @@
         }
         
         // 添加訊息到聊天界面
-        function appendMessage(sender, content) {
+        function appendMessage(sender, content, placeCards = null) {
             let messageHTML = '';
             
             if (sender === 'user') {
@@ -364,12 +728,22 @@
                     </div>
                 `;
             } else {
+                // 先添加文字回應
                 messageHTML = `
                     <div class="message assistant">
                         <img src="/static/images/cat_assistant.png" alt="Assistant" class="cat-avatar">
-                        <div>
+                        <div style="width: 100%;">
                             <div class="assistant-info">美食推薦小幫手</div>
                             <div class="message-content">${content}</div>
+                `;
+                
+                // 如果有餐廳卡片，則添加卡片
+                if (placeCards && placeCards.length > 0) {
+                    messageHTML += generateRestaurantCards(placeCards);
+                }
+                
+                // 關閉消息 div
+                messageHTML += `
                         </div>
                     </div>
                 `;
