@@ -10,4 +10,5 @@ urlpatterns = [
     path('about/', views.about, name='about'),
     path('nearby-restaurants/', views.nearby_restaurants, name='nearby_restaurants'),
     path('send_message/', views.send_message, name='send_message'),
+    path('proxy_photo/', views.proxy_photo, name='proxy_photo'),
 ] 
