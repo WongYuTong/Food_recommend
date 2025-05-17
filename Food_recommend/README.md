@@ -1,25 +1,42 @@
 # 美食推薦小幫手
 
-一個基於Django的美食推薦應用，幫助用戶發現和分享美食體驗。
+一個基於Django的智能美食推薦系統，結合AI和地理位置服務，提供個性化餐廳推薦。
 
-## 功能特點
+## 核心功能
 
-- 用戶可以與AI聊天，獲取個人化的美食推薦
-- 用戶可以創建個人資料和分享美食體驗
-- 用戶可以瀏覽和探索其他用戶的美食推薦
-- 現代化的用戶界面，包括側邊選單和響應式設計
+- **智能聊天推薦**：基於自然語言處理，理解用戶需求並推薦餐廳
+- **地理位置感知**：支援定位和基於城市、區域的搜索功能
+- **價格篩選**：可根據"平價"($$及以下)、"高級"等價格描述準確推薦餐廳
+- **餐廳卡片展示**：顯示餐廳評分、價格、照片、營業時間等完整信息
+- **顧客評價摘要**：展示用戶評論，幫助快速了解餐廳特色
+- **一鍵導航**：內建地圖查看和導航功能，方便用戶前往餐廳
 
-## 技術棧
+## 技術架構
 
-- **後端**: Python Django
-- **前端**: HTML, CSS, JavaScript, Bootstrap 5
-- **數據庫**: SQLite (開發環境)
+- **後端**：Python Django框架
+- **前端**：HTML, CSS, JavaScript, Bootstrap 5
+- **數據庫**：SQLite (開發環境)
+- **API集成**：
+  - Google Places API：餐廳搜索和詳細信息獲取
+  - Google Search API：網頁信息檢索
+  - OpenAI GPT API：自然語言理解和回應生成
+
+## 特色亮點
+
+- **台灣地區精確定位**：內建台灣縣市鄉鎮區經緯度數據，精確處理台灣各地區搜索請求
+- **價格智能映射**：準確理解"平價"、"高級"等描述詞並對應至適當價格級別
+- **響應式設計**：適配桌面和移動設備的現代化UI
+- **豐富的餐廳資訊**：包含評分、評論、照片、營業時間和聯絡方式等全方位信息
+- **簡潔回應格式**：AI回應精準簡潔，突出重要信息
 
 ## 系統需求
 
 - Python 3.8+
-- Django 3.2+
-- Pillow (用於圖片處理)
+- Django 4.0+
+- 必要的API金鑰：
+  - Google Places API
+  - Google Search API (選用)
+  - OpenAI API (選用)
 
 ## 安裝與設置
 
@@ -44,20 +61,36 @@ venv\Scripts\activate  # 在Windows上
 pip install -r requirements.txt
 ```
 
-4. 運行數據庫遷移：
+4. 設置環境變數（API金鑰）：
+
+```bash
+# Linux/Mac
+export GOOGLE_PLACES_API_KEY="your_key_here"
+export GOOGLE_SEARCH_API_KEY="your_key_here"
+export GOOGLE_CX_ID="your_cx_id_here"
+export GPT_API_KEY="your_openai_key_here"
+
+# Windows
+set GOOGLE_PLACES_API_KEY=your_key_here
+set GOOGLE_SEARCH_API_KEY=your_key_here
+set GOOGLE_CX_ID=your_cx_id_here
+set GPT_API_KEY=your_openai_key_here
+```
+
+5. 運行數據庫遷移：
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-5. 創建超級用戶（可選）：
+6. 創建超級用戶（可選）：
 
 ```bash
 python manage.py createsuperuser
 ```
 
-6. 啟動開發服務器：
+7. 啟動開發服務器：
 
 ```bash
 python manage.py runserver
@@ -68,26 +101,40 @@ python manage.py runserver
 ## 項目結構
 
 - `food_recommend/`: 主要Django項目設置
-- `chat/`: 聊天和美食推薦功能的應用
-- `user/`: 用戶管理和個人資料功能的應用
+- `chat/`: 聊天和美食推薦功能核心應用
+  - `food_tools.py`: API工具類，處理與外部服務的交互
+  - `food_controller.py`: 控制層，協調用戶查詢處理和回應生成
+- `user/`: 用戶管理和個人資料功能
 - `templates/`: HTML模板文件
-- `static/`: 靜態文件（CSS、JavaScript、圖片）
-- `media/`: 用戶上傳的媒體文件
+  - `chat/chat_room.html`: 聊天界面模板
+- `static/`: 靜態文件
+  - `json/town.json`: 台灣縣市鄉鎮區地理數據
+  - `images/`: 圖片資源
+
+## 使用指南
+
+1. 註冊/登入系統
+2. 進入聊天室與美食推薦助手互動
+3. 詢問特定地區、類型或價格的餐廳推薦
+   - 示例：「推薦基隆的平價燒烤店」
+   - 示例：「台北市有什麼好吃的日本料理？」
+4. 查看餐廳推薦卡片，獲取詳細信息
+5. 點擊「查看地圖」或「導航前往」前往餐廳
+
+## 目前支援的查詢類型
+
+- 地區餐廳查詢：「高雄有什麼好吃的？」
+- 特定料理類型：「推薦台中的義式餐廳」
+- 價格範圍篩選：「平價的台南小吃」、「台北高級日料」
+- 混合查詢：「台中西區有沒有平價的韓式烤肉？」
 
 ## 未來計劃
 
-- 實現更多的人工智能推薦功能
-- 添加美食標籤和分類系統
-- 集成地圖以顯示附近的餐廳
-- 實現社交功能，如關注其他用戶和點讚功能
-
-## 圖片需求
-
-以下是項目所需的圖片資源：
-
-1. 默認用戶頭像 (`static/images/default.jpg`): 建議尺寸 300x300px
-2. 示例美食圖片 (`static/images/food1.jpg`, `static/images/food2.jpg`): 建議尺寸 500x400px
-3. Logo圖片 (`static/images/logo.png`): 建議尺寸 200x200px
+- 擴展餐廳標籤系統，支援更多特色標籤
+- 增加餐廳收藏和歷史記錄功能
+- 添加用戶自定義偏好設置
+- 實現社交分享功能
+- 增加餐廳預訂功能
 
 ## 貢獻
 
