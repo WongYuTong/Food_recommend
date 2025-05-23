@@ -1,3 +1,4 @@
+<<<<<<< HEAD
  # Created by https://www.toptal.com/developers/gitignore/api/django
 # Edit at https://www.toptal.com/developers/gitignore?templates=django
 
@@ -172,3 +173,10 @@ cython_debug/
 #.idea/
 
 # End of https://www.toptal.com/developers/gitignore/api/django
+=======
+<<<<<<< HEAD
+ 
+=======
+ .env
+>>>>>>> 7c6cfccc7f3c63ffea558140aa93c34886bdb277
+>>>>>>> backup-main
