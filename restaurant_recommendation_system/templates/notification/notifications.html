@@ -1,13 +1,27 @@
 {% extends "base.html" %}
-{% block title %}通知 - 餐廳推薦小幫手{% endblock %}
+{% block title %}通知{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/notifications.css">
+{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow">
-                <div class="card-header bg-white">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h3 class="mb-0"><i class="fas fa-bell me-2"></i>通知中心</h3>
+                    {% if notifications %}
+                    <div>
+                        <button id="markAllReadBtn" class="btn btn-outline-primary btn-sm me-2">
+                            <i class="fas fa-check-double me-1"></i>全部已讀
+                        </button>
+                        <button id="deleteAllBtn" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-trash me-1"></i>清空通知
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="card-body p-0">
                     {% if notifications %}
@@ -18,7 +32,7 @@
                                         <div class="notification-content">
                                             {% if notification.sender %}
                                                 <img src="{{ notification.sender.profile.profile_pic.url }}" alt="{{ notification.sender.username }}" 
-                                                     class="rounded-circle me-2" width="32" height="32">
+                                                     class="rounded-circle me-2" width="40" height="40">
                                             {% else %}
                                                 <i class="fas fa-info-circle me-2 text-primary" style="font-size: 1.5rem;"></i>
                                             {% endif %}
@@ -32,7 +46,7 @@
                                                 {% if notification.post %}
                                                     <div class="mt-1">
                                                         <a href="{% url 'view_post' notification.post.id %}" class="btn btn-sm btn-outline-primary">
-                                                            查看貼文
+                                                            <i class="fas fa-eye me-1"></i>查看貼文
                                                         </a>
                                                     </div>
                                                 {% endif %}
@@ -40,7 +54,7 @@
                                         </div>
                                         
                                         <div class="notification-actions">
-                                            <button class="btn btn-sm btn-link text-danger" onclick="deleteNotification({{ notification.id }})">
+                                            <button class="btn btn-sm btn-link text-danger delete-notification-btn" data-notification-id="{{ notification.id }}">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </div>
@@ -50,7 +64,7 @@
                         </ul>
                     {% else %}
                         <div class="text-center py-5">
-                            <i class="far fa-bell-slash fa-3x text-muted mb-3"></i>
+                            <i class="far fa-bell-slash fa-4x text-muted mb-3"></i>
                             <p class="lead text-muted">您目前沒有任何通知</p>
                         </div>
                     {% endif %}
@@ -62,36 +76,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    function deleteNotification(notificationId) {
-        if (confirm('確定要刪除此通知嗎？')) {
-            fetch(`/notification/${notificationId}/delete/`, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // 移除通知元素
-                    document.getElementById(`notification-${notificationId}`).remove();
-                    
-                    // 如果沒有通知了，顯示空通知訊息
-                    const notificationItems = document.querySelectorAll('.notification-item');
-                    if (notificationItems.length === 0) {
-                        const cardBody = document.querySelector('.card-body');
-                        cardBody.innerHTML = `
-                            <div class="text-center py-5">
-                                <i class="far fa-bell-slash fa-3x text-muted mb-3"></i>
-                                <p class="lead text-muted">您目前沒有任何通知</p>
-                            </div>
-                        `;
-                    }
-                }
-            });
-        }
-    }
-</script>
+{% csrf_token %}
+<script src="/static/js/notifications.js"></script>
 {% endblock %} 

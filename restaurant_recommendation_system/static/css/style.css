@@ -1141,4 +1141,6 @@ html {
 
 .scroll-btn:active {
     transform: translateY(0);
-} 
+}
+
+/* 注意: 通知相關樣式已移至 notifications.css 文件 */ 
