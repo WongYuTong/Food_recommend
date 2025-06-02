@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}通知 - 餐廳推薦小幫手{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0"><i class="fas fa-bell me-2"></i>通知中心</h3>
+                </div>
+                <div class="card-body p-0">
+                    {% if notifications %}
+                        <ul class="list-group list-group-flush">
+                            {% for notification in notifications %}
+                                <li class="list-group-item notification-item {% if not notification.is_read %}bg-light{% endif %}" id="notification-{{ notification.id }}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="notification-content">
+                                            {% if notification.sender %}
+                                                <img src="{{ notification.sender.profile.profile_pic.url }}" alt="{{ notification.sender.username }}" 
+                                                     class="rounded-circle me-2" width="32" height="32">
+                                            {% else %}
+                                                <i class="fas fa-info-circle me-2 text-primary" style="font-size: 1.5rem;"></i>
+                                            {% endif %}
+                                            
+                                            <div class="d-inline-block">
+                                                <div class="notification-message">
+                                                    {{ notification.message }}
+                                                </div>
+                                                <small class="text-muted">{{ notification.created_at|date:"Y-m-d H:i" }}</small>
+                                                
+                                                {% if notification.post %}
+                                                    <div class="mt-1">
+                                                        <a href="{% url 'view_post' notification.post.id %}" class="btn btn-sm btn-outline-primary">
+                                                            查看貼文
+                                                        </a>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="notification-actions">
+                                            <button class="btn btn-sm btn-link text-danger" onclick="deleteNotification({{ notification.id }})">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="far fa-bell-slash fa-3x text-muted mb-3"></i>
+                            <p class="lead text-muted">您目前沒有任何通知</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function deleteNotification(notificationId) {
+        if (confirm('確定要刪除此通知嗎？')) {
+            fetch(`/notification/${notificationId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 移除通知元素
+                    document.getElementById(`notification-${notificationId}`).remove();
+                    
+                    // 如果沒有通知了，顯示空通知訊息
+                    const notificationItems = document.querySelectorAll('.notification-item');
+                    if (notificationItems.length === 0) {
+                        const cardBody = document.querySelector('.card-body');
+                        cardBody.innerHTML = `
+                            <div class="text-center py-5">
+                                <i class="far fa-bell-slash fa-3x text-muted mb-3"></i>
+                                <p class="lead text-muted">您目前沒有任何通知</p>
+                            </div>
+                        `;
+                    }
+                }
+            });
+        }
+    }
+</script>
+{% endblock %} 

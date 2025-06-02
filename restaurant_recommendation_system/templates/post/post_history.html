@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}貼文記錄 - 美食推薦小幫手{% endblock %}
+{% block title %}貼文記錄 - 餐廳推薦小幫手{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -94,14 +94,18 @@
     {% endif %}
     
     <!-- 刪除確認對話框 -->
-    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+    <div class="modal fade delete-confirm-modal" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title">確認刪除</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>警告：</strong>此操作不可逆！
+                    </div>
                     <p>確定要刪除這篇貼文嗎？此操作無法恢復。</p>
                 </div>
                 <div class="modal-footer">
@@ -135,6 +139,7 @@
         // 處理刪除按鈕點擊
         $('.delete-post-btn').click(function() {
             postIdToDelete = $(this).data('post-id');
+            // 使用Bootstrap標準模態窗口
             $('#deleteConfirmModal').modal('show');
         });
         
@@ -144,8 +149,9 @@
                 // 這裡應該實現AJAX刪除貼文的功能
                 // 目前僅示範UI交互
                 
-                // 模擬刪除操作
+                // 隱藏確認對話框
                 $('#deleteConfirmModal').modal('hide');
+                
                 showToast('貼文已成功刪除');
                 
                 // 重新載入頁面顯示更新後的貼文列表

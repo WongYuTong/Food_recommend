@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}管理儀表板 - 餐廳推薦小幫手{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.3s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .card-icon {
+        font-size: 2.5rem;
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h2><i class="fas fa-tachometer-alt me-2"></i>管理儀表板</h2>
+            <p class="text-muted">集中管理平台，監控系統運行狀態</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'create_announcement' %}" class="btn btn-primary me-2">
+                <i class="fas fa-bullhorn me-2"></i>新增系統公告
+            </a>
+            <a href="/admin/" target="_blank" class="btn btn-outline-primary">
+                <i class="fas fa-tools me-2"></i>Django 後台
+            </a>
+        </div>
+    </div>
+
+    <!-- 待處理項目 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>待處理事項</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <span class="badge bg-danger p-2" style="font-size: 1.2rem;">{{ pending_verifications_count }}</span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">待審核商家認證</h6>
+                                    <a href="{% url 'admin_verification_list' %}" class="small">前往處理 <i class="fas fa-arrow-right"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <span class="badge bg-danger p-2" style="font-size: 1.2rem;">{{ pending_reports_count }}</span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">待處理回報</h6>
+                                    <a href="{% url 'admin_reports' %}" class="small">前往處理 <i class="fas fa-arrow-right"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <span class="badge bg-warning p-2" style="font-size: 1.2rem;">{{ processing_reports_count }}</span>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">處理中回報</h6>
+                                    <a href="{% url 'admin_reports' %}" class="small">前往查看 <i class="fas fa-arrow-right"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 平台統計 -->
+    <div class="row mb-4">
+        <div class="col-12 mb-3">
+            <h4>平台統計</h4>
+        </div>
+        
+        <!-- 用戶統計 -->
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="card-icon mb-3">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3 class="display-6">{{ total_users_count }}</h3>
+                    <p class="text-muted mb-0">總用戶數</p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <span class="d-block">{{ regular_users_count }}</span>
+                            <small class="text-muted">一般用戶</small>
+                        </div>
+                        <div class="col-6">
+                            <span class="d-block">{{ business_users_count }}</span>
+                            <small class="text-muted">商家用戶</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 內容統計 -->
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="card-icon mb-3">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3 class="display-6">{{ total_posts_count }}</h3>
+                    <p class="text-muted mb-0">總貼文數</p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <span class="d-block">{{ total_comments_count }}</span>
+                            <small class="text-muted">評論</small>
+                        </div>
+                        <div class="col-6">
+                            <span class="d-block">{{ featured_posts_count }}</span>
+                            <small class="text-muted">推薦貼文</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 互動統計 -->
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="card-icon mb-3">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3 class="display-6">{{ total_favorites_count }}</h3>
+                    <p class="text-muted mb-0">總收藏數</p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <span class="d-block">{{ total_reactions_count }}</span>
+                            <small class="text-muted">表情符號</small>
+                        </div>
+                        <div class="col-6">
+                            <span class="d-block">{{ total_follows_count }}</span>
+                            <small class="text-muted">追蹤關係</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 商家統計 -->
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="card-icon mb-3">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <h3 class="display-6">{{ verified_business_count }}</h3>
+                    <p class="text-muted mb-0">已認證商家</p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="row text-center">
+                        <div class="col-12">
+                            <span class="d-block">{{ unverified_business_count }}</span>
+                            <small class="text-muted">未認證商家</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 最近活動 -->
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h4>最近活動</h4>
+        </div>
+        
+        <!-- 最近回報 -->
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-flag me-2"></i>最近回報</h5>
+                    <a href="{% url 'admin_reports' %}" class="btn btn-sm btn-outline-primary">查看全部</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for report in recent_reports %}
+                        <a href="{% url 'handle_report' report.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ report.get_report_type_display }} 回報</h6>
+                                <small>{{ report.created_at|date:"m-d H:i" }}</small>
+                            </div>
+                            <p class="mb-1 text-truncate">{{ report.reason|truncatechars:50 }}</p>
+                            <small>由 {{ report.reporter.username }} 回報</small>
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-3">
+                            <i class="fas fa-info-circle me-2"></i>目前沒有回報記錄
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 最近商家認證 -->
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user-check me-2"></i>最近認證申請</h5>
+                    <a href="{% url 'admin_verification_list' %}" class="btn btn-sm btn-outline-primary">查看全部</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for verification in recent_verifications %}
+                        <a href="{% url 'review_verification' verification.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ verification.business_name }}</h6>
+                                <small>{{ verification.submitted_at|date:"m-d H:i" }}</small>
+                            </div>
+                            <p class="mb-1 text-truncate">{{ verification.business_address }}</p>
+                            <small>申請人: {{ verification.user.username }}</small>
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-3">
+                            <i class="fas fa-info-circle me-2"></i>目前沒有認證申請
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 最近貼文 -->
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>最近貼文</h5>
+                    <a href="{% url 'explore' %}" class="btn btn-sm btn-outline-primary">查看全部</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for post in recent_posts %}
+                        <a href="{% url 'view_post' post.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ post.title }}</h6>
+                                <small>{{ post.created_at|date:"m-d H:i" }}</small>
+                            </div>
+                            <p class="mb-1 text-truncate">{{ post.content|truncatechars:50 }}</p>
+                            <small>作者: {{ post.user.username }}</small>
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-3">
+                            <i class="fas fa-info-circle me-2"></i>目前沒有貼文記錄
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 初始化儀表板JavaScript功能
+    document.addEventListener('DOMContentLoaded', function() {
+        // 任何需要的JS初始化都可以放在這裡
+    });
+</script>
+{% endblock %} 

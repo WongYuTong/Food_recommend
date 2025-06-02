@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}關於我們{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-info-circle me-2"></i>關於餐廳推薦系統</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h4>我們的使命</h4>
+                        <p>
+                            餐廳推薦系統致力於為美食愛好者提供個性化的餐廳推薦服務，
+                            幫助用戶在眾多餐飲選擇中找到最適合自己口味和需求的餐廳。
+                            我們希望讓每一次用餐體驗都成為難忘的記憶。
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4>智能推薦引擎</h4>
+                        <p>
+                            我們的系統採用Google Gemini AI模型，能夠理解用戶的自然語言查詢，
+                            結合地理位置資訊和用戶個人偏好，提供量身定制的餐廳推薦。
+                            系統會不斷學習用戶的喜好，推薦的準確性會隨著使用時間增長而提高。
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4>社交美食社群</h4>
+                        <p>
+                            除了AI推薦功能外，我們還提供社交平台功能，讓用戶分享美食體驗、
+                            發現新餐廳，並與志同道合的美食愛好者互動交流。用戶的每一次分享
+                            都能幫助其他人發現更多美食寶藏。
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4>商家合作</h4>
+                        <p>
+                            我們歡迎餐廳商家加入我們的平台，透過提供營業資訊和優惠活動，
+                            吸引更多喜愛您料理的顧客。平台提供商家驗證服務，幫助建立品牌信譽，
+                            增加曝光度和客戶忠誠度。
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4>隱私承諾</h4>
+                        <p>
+                            我們重視用戶隱私，所有個人資料僅用於改善推薦服務質量，
+                            不會被用於其他商業用途或提供給第三方。用戶可以隨時管理自己的
+                            帳號設置和數據使用偏好。
+                        </p>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <h4>開始探索美食之旅</h4>
+                        <p class="mb-4">
+                            無論您是尋找特定類型的餐廳，還是想分享自己的美食發現，
+                            我們的平台都能滿足您的需求。
+                        </p>
+                        
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'chat_room' %}" class="btn btn-primary">
+                                <i class="fas fa-robot me-2"></i>與AI助手對話
+                            </a>
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#guideModal">
+                                <i class="fas fa-book me-2"></i>餐廳推薦小幫手使用指南
+                            </button>
+                            <a href="{% url 'explore' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-compass me-2"></i>探索美食社群
+                            </a>
+                        </div>
+                    </div>                
+                </div>            
+            </div>        
+        </div>    
+    </div>
+</div>
+
+<!-- 使用指南模態框 -->
+<div class="modal fade" id="guideModal" tabindex="-1" aria-labelledby="guideModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="guideModalLabel"><i class="fas fa-book me-2"></i>餐廳推薦小幫手使用指南</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- 步驟指引內容 -->
+                <div class="guide-steps">
+                    <!-- 步驟 1 -->
+                    <div class="guide-step" data-step="1">
+                        <div class="p-4">
+                            <h5 class="border-bottom pb-2 text-success"><i class="fas fa-clipboard-list me-2"></i>步驟 1：進入對話介面</h5>
+                            <p>點擊側邊欄的「餐廳推薦小幫手」選項或系統介紹頁面的「與AI助手對話」按鈕，進入對話介面。</p>
+                            <div class="text-center mb-2">
+                                <img src="{% static 'images/guide/step1.jpg' %}" alt="進入對話介面" class="img-fluid border rounded" style="max-width: 80%;" onerror="this.style.display='none'">
+                            </div>
+                            <div class="bg-light p-3 rounded">
+                                <p class="mb-0"><i class="fas fa-lightbulb text-warning me-2"></i><strong>提示：</strong>建議登入帳戶後使用，系統能夠記錄您的偏好，提供更個人化的推薦。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 步驟 2 -->
+                    <div class="guide-step" data-step="2" style="display: none;">
+                        <div class="p-4">
+                            <h5 class="border-bottom pb-2 text-success"><i class="fas fa-clipboard-list me-2"></i>步驟 2：輸入您的需求</h5>
+                            <p>在對話框中輸入您的餐廳需求，可以包含以下資訊：</p>
+                            <ul>
+                                <li><strong>地區：</strong>指定位置，例如「台北市大安區」、「台中西區」</li>
+                                <li><strong>料理類型：</strong>如「日式料理」、「義大利麵」、「火鍋」等</li>
+                                <li><strong>價格範圍：</strong>如「平價」、「高級」、「奢華」等</li>
+                                <li><strong>特殊需求：</strong>如「適合家庭聚餐」、「寵物友善」、「提供素食選擇」等</li>
+                            </ul>
+                            <div class="bg-light p-3 rounded">
+                                <p class="mb-0"><i class="fas fa-lightbulb text-warning me-2"></i><strong>提示：</strong>詳細的描述能幫助系統提供更精準的推薦結果。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 步驟 3 -->
+                    <div class="guide-step" data-step="3" style="display: none;">
+                        <div class="p-4">
+                            <h5 class="border-bottom pb-2 text-success"><i class="fas fa-clipboard-list me-2"></i>步驟 3：查看推薦結果</h5>
+                            <p>系統會根據您的需求，顯示最符合的餐廳推薦卡片，每張卡片包含：</p>
+                            <ul>
+                                <li>餐廳名稱、評分與價格</li>
+                                <li>地址與聯絡資訊</li>
+                                <li>營業時間</li>
+                                <li>餐廳照片</li>
+                            </ul>
+                            <div class="text-center mb-2">
+                                <img src="{% static 'images/guide/step3.jpg' %}" alt="推薦餐廳卡片" class="img-fluid border rounded" style="max-width: 80%;" onerror="this.style.display='none'">
+                            </div>
+                            <div class="bg-light p-3 rounded">
+                                <p class="mb-0"><i class="fas fa-lightbulb text-warning me-2"></i><strong>未來更新：</strong>系統將加入顧客評價摘要與特色標籤（如「網友高評價」、「排隊名店」等）功能。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 步驟 4 -->
+                    <div class="guide-step" data-step="4" style="display: none;">
+                        <div class="p-4">
+                            <h5 class="border-bottom pb-2 text-success"><i class="fas fa-clipboard-list me-2"></i>步驟 4：查看地圖與導航</h5>
+                            <p>點擊推薦卡片上的「查看地圖」按鈕，可以：</p>
+                            <ul>
+                                <li>直接連結至Google地圖查看餐廳位置</li>
+                                <li>利用Google地圖獲取路線指引</li>
+                            </ul>
+                            <div class="bg-light p-3 rounded">
+                                <p class="mb-0"><i class="fas fa-lightbulb text-warning me-2"></i><strong>提示：</strong>允許系統取得您的位置權限，可以在Google地圖上提供更精確的路線建議。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 步驟 5 -->
+                    <div class="guide-step" data-step="5" style="display: none;">
+                        <div class="p-4">
+                            <h5 class="border-bottom pb-2 text-success"><i class="fas fa-clipboard-list me-2"></i>步驟 5：進一步的對話互動</h5>
+                            <div class="bg-light p-3 rounded mb-3">
+                                <p class="mb-0"><i class="fas fa-hourglass-half text-warning me-2"></i><strong>未來功能預告：</strong>本功能正在開發中，未來版本將支援以下互動：</p>
+                            </div>
+                            <p>未來版本將支援與系統進行更深入的對話，例如：</p>
+                            <ul>
+                                <li>詢問特定餐廳的更多資訊：「這家餐廳有什麼招牌菜？」</li>
+                                <li>調整推薦結果：「我想找更平價一點的選擇」</li>
+                                <li>進行比較：「這兩家餐廳哪個更適合約會？」</li>
+                                <li>詢問交通方式：「從捷運站怎麼去這家餐廳？」</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- 步驟 6 -->
+                    <div class="guide-step" data-step="6" style="display: none;">
+                        <div class="p-4">
+                            <h5 class="border-bottom pb-2 text-success"><i class="fas fa-clipboard-list me-2"></i>步驟 6：記錄您的用餐體驗</h5>
+                            <p>系統目前提供的功能：</p>
+                            <ul>
+                                <li>記錄您的用餐經歷</li>
+                                <li>查看您的用餐記錄歷史</li>
+                                <li>收藏喜愛的餐廳</li>
+                            </ul>
+                            <div class="bg-light p-3 rounded mb-3">
+                                <p class="mb-0"><i class="fas fa-hourglass-half text-warning me-2"></i><strong>未來功能預告：</strong>我們計劃加入以下功能：</p>
+                                <ul class="mb-0 mt-2">
+                                    <li>根據您的喜好自動優化推薦結果</li>
+                                </ul>
+                            </div>
+                            <div class="text-center mt-4">
+                                <a href="{% url 'chat_room' %}" class="btn btn-primary">
+                                    <i class="fas fa-comments me-2"></i>立即開始使用
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" id="prevStep" disabled>
+                    <i class="fas fa-arrow-left me-2"></i>上一步
+                </button>
+                <div class="text-center">
+                    <span class="badge bg-success p-2" id="stepIndicator">步驟 1/6</span>
+                </div>
+                <button type="button" class="btn btn-success" id="nextStep">
+                    下一步<i class="fas fa-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/chat.js"></script>
+{% endblock %} 

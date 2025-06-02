@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}註冊 - 美食推薦小幫手{% endblock %}
+{% load static %}
+{% block title %}註冊 - 餐廳推薦小幫手{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -85,6 +86,24 @@
                             </div>
                         </div>
                         
+                        <div class="mb-3">
+                            <label class="form-label">帳號類型</label>
+                            <div class="d-flex">
+                                {% for radio in form.user_type %}
+                                    <div class="form-check me-4">
+                                        {{ radio }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.user_type.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.user_type.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
                         <div class="d-grid gap-2 mb-3">
                             <button type="submit" class="btn btn-primary">註冊</button>
                         </div>
@@ -100,20 +119,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // 為表單輸入添加Bootstrap樣式
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('{{ form.username.id_for_label }}').classList.add('form-control');
-        document.getElementById('{{ form.username.id_for_label }}').setAttribute('placeholder', '選擇一個用戶名');
-        
-        document.getElementById('{{ form.email.id_for_label }}').classList.add('form-control');
-        document.getElementById('{{ form.email.id_for_label }}').setAttribute('placeholder', '輸入您的電子郵件');
-        
-        document.getElementById('{{ form.password1.id_for_label }}').classList.add('form-control');
-        document.getElementById('{{ form.password1.id_for_label }}').setAttribute('placeholder', '創建一個密碼');
-        
-        document.getElementById('{{ form.password2.id_for_label }}').classList.add('form-control');
-        document.getElementById('{{ form.password2.id_for_label }}').setAttribute('placeholder', '再次輸入您的密碼');
-    });
-</script>
+<script src="{% static 'js/register.js' %}"></script>
 {% endblock %} 

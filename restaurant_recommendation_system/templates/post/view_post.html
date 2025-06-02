@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/post_detail.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- 返回按鈕和頁面導航 -->
+    <div class="post-header mb-4">
+        <div>
+            <a href="{% url 'explore' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> 返回探索頁面
+            </a>
+        </div>
+        <div>
+            {% if request.user == post.user %}
+                <div class="btn-group">
+                    <a href="{% url 'edit_post' post.id %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i> 編輯
+                    </a>
+                    {% if post.is_pinned %}
+                        <a href="{% url 'toggle_post_pin' post.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-thumbtack me-1"></i> 取消置頂
+                        </a>
+                    {% else %}
+                        <a href="{% url 'toggle_post_pin' post.id %}" class="btn btn-outline-info">
+                            <i class="fas fa-thumbtack me-1"></i> 置頂
+                        </a>
+                    {% endif %}
+                </div>
+            {% elif request.user.is_authenticated %}
+                <a href="{% url 'report_post' post.id %}" class="btn btn-outline-danger">
+                    <i class="fas fa-flag me-1"></i> 回報
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row post-layout">
+        <!-- 貼文內容部分 -->
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <!-- 貼文頭部 -->
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ post.user.profile.profile_pic.url }}" alt="{{ post.user.username }}" 
+                             class="rounded-circle me-2" width="40" height="40">
+                        <div>
+                            <a href="{% url 'public_profile' post.user.username %}" class="fw-bold text-dark text-decoration-none">
+                                {{ post.user.username }}
+                            </a>
+                            {% if post.user.profile.user_type == 'business' %}
+                                <span class="badge bg-primary ms-2">商家</span>
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">{{ post.created_at|date:"Y-m-d H:i" }}</small>
+                        </div>
+                    </div>
+                    
+                    {% if post.is_platform_featured %}
+                        <span class="badge bg-warning">
+                            <i class="fas fa-star"></i> 精選
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <!-- 貼文圖片 -->
+                {% if post.image %}
+                    <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 500px; object-fit: contain;">
+                {% endif %}
+                
+                <!-- 貼文內容 -->
+                <div class="card-body">
+                    <h3 class="card-title mb-3">{{ post.title }}</h3>
+                    <div class="card-text mb-4">{{ post.content|linebreaks }}</div>
+                    
+                    <!-- 餐廳位置信息 -->
+                    {% if post.location_name %}
+                    <div class="location-box">
+                        <h5><i class="fas fa-map-marker-alt me-2 text-danger"></i>餐廳位置</h5>
+                        <div class="mb-2">
+                            <strong>{{ post.location_name }}</strong>
+                        </div>
+                        {% if post.location_address %}
+                        <div class="mb-2 text-muted">
+                            <i class="fas fa-map me-1"></i> {{ post.location_address }}
+                        </div>
+                        {% endif %}
+                        {% if post.location_lat and post.location_lng %}
+                        <div id="map"></div>
+                        <div class="mt-2">
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ post.location_lat }},{{ post.location_lng }}&query_place_id={{ post.location_place_id }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="fas fa-directions me-1"></i> 在Google地圖中查看
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- 反應與互動區域 -->
+                    <div class="reactions-section">
+                        <!-- 表情符號反應數量顯示 -->
+                        <div id="reactions-summary" class="mb-2" {% if total_reactions == 0 %}style="display:none"{% endif %}>
+                            <span class="text-muted">{{ total_reactions }} 人反應</span>
+                            {% for reaction_type, count in reactions_count.items %}
+                                {% if count > 0 %}
+                                    <span class="badge bg-light text-dark me-1" title="{{ reaction_type }}">
+                                        {% if reaction_type == 'like' %}👍
+                                        {% elif reaction_type == 'love' %}❤️
+                                        {% elif reaction_type == 'haha' %}😄
+                                        {% elif reaction_type == 'wow' %}😲
+                                        {% elif reaction_type == 'sad' %}😢
+                                        {% elif reaction_type == 'angry' %}😠
+                                        {% endif %}
+                                        <span class="reaction-count">{{ count }}</span>
+                                    </span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="actions-section">
+                        <!-- 表情符號反應按鈕 -->
+                        {% if request.user.is_authenticated %}
+                        <div class="btn-group" role="group">
+                            <button type="button" id="reaction-button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                {% if user_reaction %}
+                                    {% if user_reaction == 'like' %}👍 讚
+                                    {% elif user_reaction == 'love' %}❤️ 愛心
+                                    {% elif user_reaction == 'haha' %}😄 哈哈
+                                    {% elif user_reaction == 'wow' %}😲 哇
+                                    {% elif user_reaction == 'sad' %}😢 傷心
+                                    {% elif user_reaction == 'angry' %}😠 怒
+                                    {% endif %}
+                                {% else %}
+                                    <i class="far fa-smile me-1"></i> 表情
+                                {% endif %}
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item reaction-btn" href="#" data-reaction="like"><span class="reaction-icon">👍</span> 讚 <span class="badge bg-secondary ms-1">{{ reactions_count.like|default:"0" }}</span></a></li>
+                                <li><a class="dropdown-item reaction-btn" href="#" data-reaction="love"><span class="reaction-icon">❤️</span> 愛心 <span class="badge bg-secondary ms-1">{{ reactions_count.love|default:"0" }}</span></a></li>
+                                <li><a class="dropdown-item reaction-btn" href="#" data-reaction="haha"><span class="reaction-icon">😄</span> 哈哈 <span class="badge bg-secondary ms-1">{{ reactions_count.haha|default:"0" }}</span></a></li>
+                                <li><a class="dropdown-item reaction-btn" href="#" data-reaction="wow"><span class="reaction-icon">😲</span> 哇 <span class="badge bg-secondary ms-1">{{ reactions_count.wow|default:"0" }}</span></a></li>
+                                <li><a class="dropdown-item reaction-btn" href="#" data-reaction="sad"><span class="reaction-icon">😢</span> 傷心 <span class="badge bg-secondary ms-1">{{ reactions_count.sad|default:"0" }}</span></a></li>
+                                <li><a class="dropdown-item reaction-btn" href="#" data-reaction="angry"><span class="reaction-icon">😠</span> 怒 <span class="badge bg-secondary ms-1">{{ reactions_count.angry|default:"0" }}</span></a></li>
+                                <li id="remove-reaction-option" {% if not user_reaction %}style="display:none"{% endif %}><hr class="dropdown-divider"></li>
+                                <li id="remove-reaction-option" {% if not user_reaction %}style="display:none"{% endif %}><a class="dropdown-item text-danger" href="#">移除反應</a></li>
+                            </ul>
+                        </div>
+                        {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-outline-secondary">
+                            <i class="far fa-smile me-1"></i> 登入以新增表情
+                        </a>
+                        {% endif %}
+                        
+                        <!-- 收藏按鈕 -->
+                        {% if request.user.is_authenticated %}
+                            <button id="favorite-button" class="btn {% if is_favorited %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                                <i class="fas fa-heart me-1"></i>
+                                <span id="favorite-text">
+                                    {% if is_favorited %}取消收藏{% else %}收藏{% endif %}
+                                </span>
+                            </button>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-sign-in-alt me-1"></i> 登入以收藏
+                            </a>
+                        {% endif %}
+                        
+                        <!-- 分享按鈕 -->
+                        <button id="share-button" class="btn btn-outline-primary">
+                            <i class="fas fa-share-alt me-1"></i> 分享
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 相關推薦 -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">此用戶的其他貼文</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- 這裡可以通過Ajax加載同一用戶的其他貼文 -->
+                        <div class="col-12 text-center">
+                            <a href="{% url 'public_profile' post.user.username %}" class="btn btn-outline-primary">
+                                <i class="fas fa-user me-1"></i> 訪問 {{ post.user.username }} 的個人頁面
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 評論區域 -->
+        <div class="col-md-4">
+            <div class="card shadow mb-4 comment-section">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-comments me-2"></i>評論區</h5>
+                </div>
+                <div class="card-body">
+                    {% if request.user.is_authenticated %}
+                        <!-- 評論表單 -->
+                        <form method="POST" class="mb-4">
+                            {% csrf_token %}
+                            <div class="d-flex align-items-start">
+                                <img src="{{ request.user.profile.profile_pic.url }}" alt="{{ request.user.username }}" 
+                                     class="rounded-circle me-2" width="40" height="40">
+                                <div class="flex-grow-1">
+                                    {{ comment_form }}
+                                    <button type="submit" class="btn btn-primary mt-2">發表評論</button>
+                                </div>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> 請<a href="{% url 'login' %}">登入</a>後發表評論
+                        </div>
+                    {% endif %}
+                    
+                    <!-- 評論列表 -->
+                    <div class="comments-list">
+                        {% if comments %}
+                            {% for comment in comments %}
+                                <div class="comment mb-3 p-3 border rounded{% if comment.user == post.user %} border-primary{% endif %}">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ comment.user.profile.profile_pic.url }}" alt="{{ comment.user.username }}" 
+                                                 class="rounded-circle me-2" width="32" height="32">
+                                            <div>
+                                                <a href="{% url 'public_profile' comment.user.username %}" class="fw-bold text-decoration-none">
+                                                    {{ comment.user.username }}
+                                                </a>
+                                                {% if comment.user == post.user %}
+                                                    <span class="badge bg-primary ms-1">作者</span>
+                                                {% endif %}
+                                                {% if comment.user.profile.user_type == 'business' %}
+                                                    <span class="badge bg-success ms-1">商家</span>
+                                                {% endif %}
+                                                <small class="text-muted d-block">{{ comment.created_at|date:"Y-m-d H:i" }}</small>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if request.user == comment.user or request.user.is_staff %}
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-link text-muted" type="button" id="commentMenu{{ comment.id }}" 
+                                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu" aria-labelledby="commentMenu{{ comment.id }}">
+                                                    {% if request.user == comment.user or request.user.is_staff %}
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" href="{% url 'delete_comment' comment.id %}" 
+                                                               onclick="return confirm('確定要刪除此評論嗎？')">
+                                                                <i class="fas fa-trash-alt me-2"></i> 刪除
+                                                            </a>
+                                                        </li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                        {% elif request.user.is_authenticated %}
+                                            <a href="{% url 'report_comment' comment.id %}" class="btn btn-sm btn-link text-danger" title="回報此評論">
+                                                <i class="fas fa-flag"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="comment-content mt-2">
+                                        {{ comment.content|linebreaks }}
+                                    </div>
+                                    
+                                    <!-- 評論的回覆 -->
+                                    {% if comment.replies.all %}
+                                        <div class="reply-section mt-2">
+                                            {% for reply in comment.get_replies %}
+                                                <div class="reply mb-2 p-2">
+                                                    <div class="d-flex justify-content-between">
+                                                        <div class="d-flex align-items-center">
+                                                            <img src="{{ reply.user.profile.profile_pic.url }}" alt="{{ reply.user.username }}" 
+                                                                 class="rounded-circle me-2" width="24" height="24">
+                                                            <div>
+                                                                <a href="{% url 'public_profile' reply.user.username %}" class="fw-bold text-decoration-none">
+                                                                    {{ reply.user.username }}
+                                                                </a>
+                                                                {% if reply.user == post.user %}
+                                                                    <span class="badge bg-primary ms-1">作者</span>
+                                                                {% endif %}
+                                                                <small class="text-muted d-block">{{ reply.created_at|date:"Y-m-d H:i" }}</small>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {% if request.user == reply.user or request.user.is_staff %}
+                                                            <div>
+                                                                <a href="{% url 'delete_comment' reply.id %}" class="btn btn-sm btn-link text-danger"
+                                                                   onclick="return confirm('確定要刪除此回覆嗎？')">
+                                                                    <i class="fas fa-times"></i>
+                                                                </a>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="reply-content mt-1">
+                                                        {{ reply.content|linebreaks }}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- 回覆表單 -->
+                                    {% if request.user.is_authenticated %}
+                                        <button class="btn btn-sm btn-light mt-2" onclick="toggleReplyForm('replyForm{{ comment.id }}')">
+                                            <i class="fas fa-reply me-1"></i> 回覆
+                                        </button>
+                                        <div id="replyForm{{ comment.id }}" class="reply-form" style="display: none;">
+                                            <form method="POST">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="parent_comment_id" value="{{ comment.id }}">
+                                                <div class="mb-2">
+                                                    <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="回覆評論..."></textarea>
+                                                </div>
+                                                <button type="submit" class="btn btn-sm btn-primary">發表回覆</button>
+                                            </form>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                                <p>還沒有評論，快來發表第一則評論吧！</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/post_detail.js' %}"></script>
+
+{% if post.location_lat and post.location_lng %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 設置全局變數，避免在onclick屬性中使用Django模板標籤
+        window.postId = "{{ post.id }}";
+        window.csrfToken = '{{ csrf_token }}';
+        window.postTitle = '{{ post.title|escapejs }}';
+        window.postLat = "{{ post.location_lat }}";
+        window.postLng = "{{ post.location_lng }}";
+        window.locationName = '{{ post.location_name|escapejs }}';
+        
+        // 為表情符號按鈕添加事件監聽器
+        document.querySelectorAll('.reaction-btn').forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const reactionType = this.getAttribute('data-reaction');
+                addReaction(reactionType, window.postId, window.csrfToken);
+            });
+        });
+        
+        // 為移除反應按鈕添加事件監聽器
+        const removeReactionBtn = document.querySelector('.dropdown-item.text-danger');
+        if (removeReactionBtn) {
+            removeReactionBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                removeReaction(window.postId, window.csrfToken);
+            });
+        }
+        
+        // 為收藏按鈕添加事件監聽器
+        const favoriteBtn = document.getElementById('favorite-button');
+        if (favoriteBtn) {
+            favoriteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleFavorite(window.postId, window.csrfToken);
+            });
+        }
+        
+        // 為分享按鈕添加事件監聽器
+        const shareBtn = document.getElementById('share-button');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                sharePost(window.postTitle);
+            });
+        }
+        
+        // Google Maps API 載入完成後調用
+        window.initMap = function() {
+            const lat = parseFloat(window.postLat);
+            const lng = parseFloat(window.postLng);
+            initMap(lat, lng, window.locationName);
+        };
+    });
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&callback=initMap" async defer></script>
+{% endif %}
+{% endblock %} 
