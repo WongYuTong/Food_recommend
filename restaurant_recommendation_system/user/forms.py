@@ -176,6 +176,15 @@ class BusinessVerificationForm(forms.ModelForm):
         self.fields['business_email'].label = "商業信箱"
         self.fields['registration_document'].label = "營業登記文件 (PDF檔)"
         self.fields['additional_notes'].label = "補充說明 (可選)" 
+        
+        # 添加 Bootstrap 樣式
+        self.fields['business_name'].widget.attrs.update({'class': 'form-control', 'placeholder': '請輸入商家名稱'})
+        self.fields['business_registration_number'].widget.attrs.update({'class': 'form-control', 'placeholder': '請輸入營業登記號碼'})
+        self.fields['business_address'].widget.attrs.update({'class': 'form-control', 'placeholder': '請輸入商家地址'})
+        self.fields['business_phone'].widget.attrs.update({'class': 'form-control', 'placeholder': '請輸入聯絡電話'})
+        self.fields['business_email'].widget.attrs.update({'class': 'form-control', 'placeholder': '請輸入商業信箱'})
+        self.fields['registration_document'].widget.attrs.update({'class': 'form-control'})
+        self.fields['additional_notes'].widget.attrs.update({'class': 'form-control', 'rows': 3, 'placeholder': '如有其他需要說明的事項，請在此處補充'})
 
 class CommentForm(forms.ModelForm):
     """評論表單"""

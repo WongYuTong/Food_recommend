@@ -19,7 +19,8 @@ def register(request):
     
     if request.method == 'POST':
         if show_business_form:
-            form = BusinessRegisterForm(request.POST, request.FILES)
+            # 商家註冊使用普通表單，後續再完成驗證資料
+            form = UserRegisterForm(request.POST)
         else:
             form = UserRegisterForm(request.POST)
             
@@ -34,27 +35,10 @@ def register(request):
                 # 創建用戶個人資料並設置用戶類型
                 profile = Profile.objects.get(user=user)
                 profile.user_type = user_type
-                profile.verification_status = 'pending'  # 設置為審核中
-                profile.business_name = form.cleaned_data.get('business_name')
-                profile.business_address = form.cleaned_data.get('business_address')
-                profile.business_phone = form.cleaned_data.get('business_phone')
+                profile.verification_status = 'unverified'  # 初始設置為未驗證，等待提交資料
                 profile.save()
                 
-                # 創建商家驗證記錄
-                verification = BusinessVerification(
-                    user=user,
-                    business_name=form.cleaned_data.get('business_name'),
-                    business_registration_number=form.cleaned_data.get('business_registration_number'),
-                    business_address=form.cleaned_data.get('business_address'),
-                    business_phone=form.cleaned_data.get('business_phone'),
-                    business_email=form.cleaned_data.get('business_email'),
-                    registration_document=form.cleaned_data.get('registration_document'),
-                    additional_notes=form.cleaned_data.get('additional_notes'),
-                    status='pending'
-                )
-                verification.save()
-                
-                messages.success(request, f'商家帳號已建立，認證申請已提交，請等待審核！')
+                messages.success(request, f'商家帳號已建立，請立即完成商家資訊驗證！')
                 
                 # 自動登入新用戶
                 user = authenticate(username=form.cleaned_data['username'],
@@ -62,7 +46,7 @@ def register(request):
                 login(request, user)
                 
                 # 導向到商家驗證頁面
-                return redirect('apply_verification')
+                return redirect('apply_for_verification')
             else:
                 # 處理一般用戶註冊
                 user_type = form.cleaned_data.get('user_type')
@@ -76,13 +60,10 @@ def register(request):
                 return redirect('login')
     else:
         # GET請求，創建空表單
-        user_form = UserRegisterForm()
-        business_form = BusinessRegisterForm()
+        form = UserRegisterForm()
         
     return render(request, 'user/register.html', {
-        'form': UserRegisterForm() if not show_business_form else BusinessRegisterForm(),
-        'user_form': UserRegisterForm(),
-        'business_form': BusinessRegisterForm(),
+        'form': form,
         'show_business_form': show_business_form
     })
 
@@ -94,8 +75,15 @@ def login_view(request):
         
         if user is not None:
             login(request, user)
-            # 登入後導向聊天室頁面
-            return redirect('chat_room')
+            
+            # 根據用戶權限導向不同頁面
+            if user.is_staff or user.is_superuser:
+                # 管理員導向管理儀表板
+                messages.success(request, f'歡迎回來，{user.username}！')
+                return redirect('admin_dashboard')
+            else:
+                # 一般用戶導向聊天室頁面
+                return redirect('chat_room')
         else:
             messages.error(request, '帳號或密碼不正確！')
     
@@ -520,27 +508,22 @@ def following(request, user_id=None):
 # 新增功能 - 商家認證申請
 @login_required
 def apply_for_verification(request):
-    # 檢查用戶是否已經是商家
+    # 檢查用戶資料
     profile = request.user.profile
-    if profile.user_type != 'business':
-        messages.error(request, '只有商家用戶可以申請認證！')
-        return redirect('profile')
+    is_new_application = True
     
-    # 檢查是否已有待審核的申請
-    pending_verification = BusinessVerification.objects.filter(
-        user=request.user, 
-        status__in=['pending', 'verified']
-    ).first()
+    # 檢查是否已有申請記錄
+    existing_verification = BusinessVerification.objects.filter(
+        user=request.user
+    ).order_by('-submitted_at').first()
     
-    if pending_verification and pending_verification.status == 'verified':
-        messages.info(request, '您的商家已通過認證！')
-        return redirect('profile')
-    elif pending_verification:
-        messages.info(request, '您已提交認證申請，正在審核中，請耐心等待。')
+    # 如果已經是已驗證的商家，顯示提示並跳轉
+    if profile.user_type == 'business' and profile.verification_status == 'verified':
+        messages.info(request, '您的商家帳號已經通過驗證，無需再次申請！')
         return redirect('profile')
     
     if request.method == 'POST':
-        form = BusinessVerificationForm(request.POST, request.FILES)
+        form = BusinessVerificationForm(request.POST, request.FILES, instance=existing_verification)
         if form.is_valid():
             verification = form.save(commit=False)
             verification.user = request.user
@@ -548,22 +531,58 @@ def apply_for_verification(request):
             verification.save()
             
             # 更新用戶狀態為審核中
+            profile.user_type = 'business'  # 確保用戶類型是商家
             profile.verification_status = 'pending'
             profile.save()
             
-            messages.success(request, '商家認證申請已提交，請等待審核！')
+            # 向管理員發送通知
+            admin_users = User.objects.filter(is_staff=True)
+            notification_message = f"有新的商家申請需要審核: {verification.business_name}" if is_new_application else f"商家 {verification.business_name} 更新了申請資料"
+            
+            for admin in admin_users:
+                Notification.objects.create(
+                    recipient=admin,
+                    sender=request.user,
+                    notification_type='system',
+                    message=notification_message
+                )
+            
+            if is_new_application:
+                messages.success(request, '商家認證申請已提交，請等待審核！')
+            else:
+                messages.success(request, '商家認證資料已更新，請等待審核！')
             return redirect('profile')
     else:
-        # 預填用戶已有的商家資訊
-        initial_data = {
-            'business_name': profile.business_name,
-            'business_address': profile.business_address,
-            'business_phone': profile.business_phone,
-            'business_email': request.user.email
-        }
-        form = BusinessVerificationForm(initial=initial_data)
+        if existing_verification:
+            # 如果有現有申請，使用其資料預填表單
+            is_new_application = False
+            form = BusinessVerificationForm(instance=existing_verification)
+            
+            # 顯示不同提示訊息，依據狀態
+            if existing_verification.status == 'pending':
+                messages.info(request, '您的申請正在審核中。如需更新資料，請修改後重新提交。')
+            elif existing_verification.status == 'rejected':
+                messages.warning(request, '您之前的申請已被拒絕。您可以修改資料後重新提交。')
+                if existing_verification.review_notes:
+                    messages.info(request, f'拒絕理由: {existing_verification.review_notes}')
+        else:
+            # 預填用戶已有的商家資訊
+            initial_data = {
+                'business_name': profile.business_name if profile.business_name else '',
+                'business_address': profile.business_address if profile.business_address else '',
+                'business_phone': profile.business_phone if profile.business_phone else '',
+                'business_email': request.user.email
+            }
+            form = BusinessVerificationForm(initial=initial_data)
+            
+            # 如果用戶是新註冊的商家，但還未提交驗證資料
+            if profile.user_type == 'business' and profile.verification_status == 'unverified':
+                messages.info(request, '請完成商家資訊驗證以啟用商家功能。')
     
-    return render(request, 'business/apply_verification.html', {'form': form})
+    return render(request, 'business/apply_verification.html', {
+        'form': form,
+        'is_new_application': is_new_application
+    })
 
 # 新增功能 - 管理員審核商家認證
 @staff_member_required
@@ -832,6 +851,22 @@ def delete_notification(request, notification_id):
         return JsonResponse({'status': 'success', 'message': '通知已刪除'})
     
     return redirect('notifications')
+
+@login_required
+def mark_all_notifications_read(request):
+    """標記所有通知為已讀"""
+    if request.method == 'POST':
+        Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+        return JsonResponse({'status': 'success', 'message': '所有通知已標記為已讀'})
+    return JsonResponse({'status': 'error', 'message': '方法不允許'}, status=405)
+
+@login_required
+def delete_all_notifications(request):
+    """刪除所有通知"""
+    if request.method == 'POST':
+        Notification.objects.filter(recipient=request.user).delete()
+        return JsonResponse({'status': 'success', 'message': '所有通知已刪除'})
+    return JsonResponse({'status': 'error', 'message': '方法不允許'}, status=405)
 
 @login_required
 def report_post(request, post_id):

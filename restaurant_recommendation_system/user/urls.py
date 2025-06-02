@@ -54,6 +54,8 @@ urlpatterns = [
     path('notifications/', views.notifications, name='notifications'),
     path('notification/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
     path('notification/<int:notification_id>/delete/', views.delete_notification, name='delete_notification'),
+    path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    path('notifications/delete-all/', views.delete_all_notifications, name='delete_all_notifications'),
     
     # 新增 - 回報系統
     path('report/post/<int:post_id>/', views.report_post, name='report_post'),
