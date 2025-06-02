@@ -15,6 +15,21 @@ class Message(models.Model):
     class Meta:
         ordering = ['timestamp']
 
+class ChatHistory(models.Model):
+    """用戶的聊天歷史記錄"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_histories')
+    title = models.CharField(max_length=255, help_text="聊天標題")
+    content = models.TextField(help_text="完整的聊天內容HTML")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name_plural = "Chat histories"
+    
+    def __str__(self):
+        return f"{self.user.username}: {self.title}"
+
 class Recommendation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     food_name = models.CharField(max_length=100)
@@ -69,3 +84,32 @@ class QueryHistory(models.Model):
     
     def __str__(self):
         return f"{self.user.username}: {self.query_text[:50]}"
+
+# 新增使用者偏好詳細資料表
+class UserPreferenceDetail(models.Model):
+    """使用者偏好詳細資料表"""
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='preference_details')
+    preference_type = models.CharField(max_length=20, 
+                                      help_text="偏好類型（口味/菜系/地區/禁忌）")
+    preference_value = models.CharField(max_length=255, 
+                                      help_text="偏好值（如：不辣/日式料理/台北市）")
+    score = models.FloatField(help_text="對該偏好的強度（+代表喜好，-代表排斥）")
+    source = models.CharField(max_length=20, 
+                            help_text="來源（dialog/post/collection）")
+    source_id = models.IntegerField(null=True, blank=True, 
+                                  help_text="對應該來源的id，例如貼文編號")
+    created_at = models.DateTimeField(auto_now_add=True, 
+                                    help_text="記錄建立時間")
+    updated_at = models.DateTimeField(auto_now=True, 
+                                    help_text="最後更新時間") 
+    
+    class Meta:
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['user', 'preference_type']),
+            models.Index(fields=['user', 'score']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.preference_type}: {self.preference_value} ({self.score})"

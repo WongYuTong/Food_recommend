@@ -1,5 +1,5 @@
 """
-URL configuration for food_recommend project.
+URL configuration for restaurant_recommendation_system project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('chat/', include('chat.urls')),
     path('user/', include('user.urls')),
+    path('api/', include('user.api_urls')),  # API端点
     path('', RedirectView.as_view(url='/chat/chat_room/', permanent=False)),
 ]
 

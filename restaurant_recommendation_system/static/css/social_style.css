@@ -1,0 +1,180 @@
+/**
+ * 社交相關頁面的CSS樣式
+ * 包含貼文、用戶推薦、動態牆等樣式
+ * 注意：此檔案依賴於style.css中定義的全局變量
+ */
+
+/* 卡片樣式 */
+.card {
+    border: none;
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 0.75rem 1rem;
+}
+
+.card-footer {
+    background-color: white;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 0.75rem 1rem;
+}
+
+/* 貼文卡片樣式 */
+.post-card {
+    transition: all 0.3s ease;
+}
+
+.post-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--box-shadow-hover) !important;
+}
+
+.post-image {
+    height: 200px;
+    object-fit: cover;
+}
+
+.post-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.post-content {
+    color: var(--text-dark);
+    margin-bottom: 1rem;
+}
+
+/* 用戶相關樣式 */
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-avatar-sm {
+    width: 32px;
+    height: 32px;
+}
+
+.user-avatar-lg {
+    width: 64px;
+    height: 64px;
+}
+
+/* 用戶名稱樣式 */
+.user-name {
+    font-weight: 600;
+    color: var(--text-dark);
+    text-decoration: none;
+}
+
+.user-name:hover {
+    text-decoration: underline;
+}
+
+/* 互動按鈕樣式 */
+.favorite-btn {
+    color: var(--danger-color);
+}
+
+.favorite-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.follow-btn {
+    color: var(--info-color);
+}
+
+.follow-btn:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* 標籤樣式 */
+.badge.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+.badge.bg-warning {
+    color: #713f12;
+    background-color: #fef3c7 !important;
+    border: 1px solid var(--warning-color);
+}
+
+/* 側邊欄樣式 */
+.sidebar-section {
+    position: sticky;
+    top: 20px;
+}
+
+.recommended-user-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.recommended-user-item:hover {
+    background-color: var(--light-gray-bg);
+}
+
+/* 篩選區域樣式 */
+.filter-area {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: var(--light-gray-bg);
+    border-radius: 0.5rem;
+}
+
+/* 探索頁分類標籤 */
+.category-tabs {
+    display: flex;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.category-tab {
+    padding: 0.75rem 1.25rem;
+    font-weight: 500;
+    color: var(--text-light);
+    white-space: nowrap;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.category-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.category-tab:hover:not(.active) {
+    color: var(--text-dark);
+    border-bottom-color: var(--border-color);
+}
+
+/* 響應式調整 */
+@media (max-width: 992px) {
+    .sidebar-section {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .post-image {
+        height: 180px;
+    }
+}
+
+@media (max-width: 576px) {
+    .card-header, .card-footer {
+        padding: 0.75rem;
+    }
+    
+    .card-body {
+        padding: 1rem 0.75rem;
+    }
+} 

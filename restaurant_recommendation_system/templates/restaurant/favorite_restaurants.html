@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}我的收藏餐廳{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0"><i class="fas fa-utensils me-2"></i>我的收藏餐廳</h2>
+                <a href="{% url 'chat_room' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-search me-1"></i> 尋找更多餐廳
+                </a>
+            </div>
+
+            {% if favorite_restaurants %}
+                <div class="mb-4">
+                    <div class="restaurant-cards-scroll">
+                        {% for favorite in favorite_restaurants %}
+                        <div class="restaurant-card">
+                            <div class="card-header">
+                                <h5 class="restaurant-name">{{ favorite.restaurant_name }}</h5>
+                            </div>
+                            <div class="restaurant-image">
+                                <img src="{{ favorite.restaurant_image_url|default:'/static/images/default_restaurant.jpg' }}" 
+                                     alt="{{ favorite.restaurant_name }}" 
+                                     onerror="this.src='/static/images/default_restaurant.jpg'">
+                            </div>
+                            <div class="status-badge">營業中</div>
+                            <div class="restaurant-info">
+                                <div class="restaurant-meta">
+                                    <span class="restaurant-rating">
+                                        {% if favorite.restaurant_rating %}
+                                            {{ favorite.restaurant_rating|floatformat:1 }}
+                                            <!-- 根據評分顯示星星 -->
+                                            <span class="ms-1">
+                                                {% for i in "12345" %}
+                                                    {% if forloop.counter <= favorite.restaurant_rating|floatformat:0|add:"0" %}
+                                                        <i class="fas fa-star text-warning"></i>
+                                                    {% elif forloop.counter|add:"-0.5" <= favorite.restaurant_rating %}
+                                                        <i class="fas fa-star-half-alt text-warning"></i>
+                                                    {% else %}
+                                                        <i class="far fa-star text-warning"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </span>
+                                        {% else %}
+                                            暫無評分 <i class="far fa-star text-warning"></i>
+                                        {% endif %}
+                                    </span>
+                                    <span class="restaurant-price">
+                                        {% if favorite.restaurant_price_level %}
+                                            {% with ''|center:favorite.restaurant_price_level as range %}
+                                                {% for _ in range %}￥{% endfor %}
+                                            {% endwith %}
+                                        {% else %}
+                                            價格未知
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <p class="restaurant-address">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>{{ favorite.restaurant_address|default:"地址未知" }}</span>
+                                </p>
+                                <div class="action-buttons">
+                                    <a href="https://www.google.com/maps/search/?api=1&query={{ favorite.restaurant_name|urlencode }}&query_place_id={{ favorite.restaurant_place_id|default:'' }}" 
+                                       target="_blank" class="btn btn-map">
+                                        <i class="fas fa-map"></i> 查看地圖
+                                    </a>
+                                    <a href="{% url 'delete_favorite_restaurant' favorite.id %}" class="btn btn-favorite favorited">
+                                        <i class="fas fa-star"></i> 取消收藏
+                                    </a>
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination={{ favorite.restaurant_name|urlencode }}&destination_place_id={{ favorite.restaurant_place_id|default:'' }}" 
+                                       target="_blank" class="btn btn-navigation">
+                                        <i class="fas fa-directions"></i> 導航前往
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="scroll-controls">
+                        <button class="scroll-btn scroll-left">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="scroll-btn scroll-right">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <div class="text-center py-5">
+                        <i class="fas fa-utensils fa-5x mb-3 text-muted"></i>
+                        <h3>您還沒有收藏任何餐廳</h3>
+                        <p class="lead mb-4">使用聊天機器人尋找餐廳並添加到收藏夾吧!</p>
+                        <a href="{% url 'chat_room' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-robot me-2"></i> 開始聊天尋找餐廳
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/favorite_restaurant.js"></script>
+{% endblock %} 
