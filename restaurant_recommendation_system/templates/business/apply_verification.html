@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}申請商家認證{% endblock %}
+{% block title %}{% if is_new_application %}申請商家認證{% else %}修改商家認證資料{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -9,17 +9,23 @@
         <div class="col-md-8">
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">申請商家認證</h3>
+                    <h3 class="mb-0">{% if is_new_application %}申請商家認證{% else %}修改商家認證資料{% endif %}</h3>
                 </div>
                 <div class="card-body">
-                    <p class="lead mb-4">請提供您的商家資訊以進行身份驗證。認證通過後，您將能夠發布優惠活動並管理商家頁面。</p>
+                    <p class="lead mb-4">
+                      {% if is_new_application %}
+                      請提供您的商家資訊以進行身份驗證。認證通過後，您將能夠發布優惠活動並管理商家頁面。
+                      {% else %}
+                      您可以修改商家資訊並重新提交申請。修改後的資料將再次送交管理員審核。
+                      {% endif %}
+                    </p>
                     
                     <form method="POST" enctype="multipart/form-data">
                         {% csrf_token %}
                         
                         <div class="mb-3">
                             <label for="{{ form.business_name.id_for_label }}" class="form-label">{{ form.business_name.label }}</label>
-                            {{ form.business_name|addclass:"form-control" }}
+                            {{ form.business_name }}
                             {% if form.business_name.errors %}
                                 <div class="text-danger">
                                     {% for error in form.business_name.errors %}
@@ -31,7 +37,7 @@
                         
                         <div class="mb-3">
                             <label for="{{ form.business_registration_number.id_for_label }}" class="form-label">{{ form.business_registration_number.label }}</label>
-                            {{ form.business_registration_number|addclass:"form-control" }}
+                            {{ form.business_registration_number }}
                             {% if form.business_registration_number.errors %}
                                 <div class="text-danger">
                                     {% for error in form.business_registration_number.errors %}
@@ -44,7 +50,7 @@
                         
                         <div class="mb-3">
                             <label for="{{ form.business_address.id_for_label }}" class="form-label">{{ form.business_address.label }}</label>
-                            {{ form.business_address|addclass:"form-control" }}
+                            {{ form.business_address }}
                             {% if form.business_address.errors %}
                                 <div class="text-danger">
                                     {% for error in form.business_address.errors %}
@@ -58,7 +64,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.business_phone.id_for_label }}" class="form-label">{{ form.business_phone.label }}</label>
-                                    {{ form.business_phone|addclass:"form-control" }}
+                                    {{ form.business_phone }}
                                     {% if form.business_phone.errors %}
                                         <div class="text-danger">
                                             {% for error in form.business_phone.errors %}
@@ -71,7 +77,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.business_email.id_for_label }}" class="form-label">{{ form.business_email.label }}</label>
-                                    {{ form.business_email|addclass:"form-control" }}
+                                    {{ form.business_email }}
                                     {% if form.business_email.errors %}
                                         <div class="text-danger">
                                             {% for error in form.business_email.errors %}
@@ -85,7 +91,7 @@
                         
                         <div class="mb-3">
                             <label for="{{ form.registration_document.id_for_label }}" class="form-label">{{ form.registration_document.label }}</label>
-                            {{ form.registration_document|addclass:"form-control" }}
+                            {{ form.registration_document }}
                             {% if form.registration_document.errors %}
                                 <div class="text-danger">
                                     {% for error in form.registration_document.errors %}
@@ -93,12 +99,18 @@
                                     {% endfor %}
                                 </div>
                             {% endif %}
-                            <small class="form-text text-muted">請上傳您的營業登記證明文件（PDF、JPG 或 PNG 格式）。</small>
+                            <small class="form-text text-muted">
+                              {% if is_new_application %}
+                              請上傳您的營業登記證明文件（PDF、JPG 或 PNG 格式）。
+                              {% else %}
+                              如需更換證明文件，請上傳新的文件；若無需變更，可留空。
+                              {% endif %}
+                            </small>
                         </div>
                         
                         <div class="mb-4">
                             <label for="{{ form.additional_notes.id_for_label }}" class="form-label">{{ form.additional_notes.label }}</label>
-                            {{ form.additional_notes|addclass:"form-control" }}
+                            {{ form.additional_notes }}
                             {% if form.additional_notes.errors %}
                                 <div class="text-danger">
                                     {% for error in form.additional_notes.errors %}
@@ -115,7 +127,9 @@
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                             <a href="{% url 'profile' %}" class="btn btn-outline-secondary me-md-2">取消</a>
-                            <button type="submit" class="btn btn-primary">提交申請</button>
+                            <button type="submit" class="btn btn-primary">
+                              {% if is_new_application %}提交申請{% else %}更新申請{% endif %}
+                            </button>
                         </div>
                     </form>
                 </div>

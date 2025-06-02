@@ -13,7 +13,7 @@
                         <p class="text-muted">創建您的帳號來開始使用美食推薦小幫手</p>
                     </div>
                     
-                    <form method="POST">
+                    <form method="POST" id="registerForm" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -102,6 +102,15 @@
                                     {% endfor %}
                                 </div>
                             {% endif %}
+                        </div>
+
+                        <!-- 商家註冊欄位，初始隱藏 -->
+                        <div id="business-fields" style="display: none;">
+                            <hr class="mb-4">
+                            <h4 class="mb-3">商家資訊</h4>
+                            <div class="alert alert-info mb-4">
+                                <i class="fas fa-info-circle me-2"></i> 請先填寫基本資訊並送出表單，註冊成功後會導向至商家驗證頁面進行身分驗證。
+                            </div>
                         </div>
                         
                         <div class="d-grid gap-2 mb-3">

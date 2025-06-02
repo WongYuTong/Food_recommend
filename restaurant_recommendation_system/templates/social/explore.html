@@ -62,6 +62,23 @@
                                 {% endif %}
                                 {% if post.user.profile.user_type == 'business' %}
                                 <span class="badge bg-primary ms-1">商家</span>
+                                {% if post.user.profile.verification_status == 'verified' %}
+                                <span class="badge bg-success ms-1">
+                                    <i class="fas fa-check-circle"></i> 已認證
+                                </span>
+                                {% elif post.user.profile.verification_status == 'pending' %}
+                                <span class="badge bg-warning ms-1">
+                                    <i class="fas fa-clock"></i> 審核中
+                                </span>
+                                {% elif post.user.profile.verification_status == 'rejected' %}
+                                <span class="badge bg-danger ms-1">
+                                    <i class="fas fa-times-circle"></i> 已拒絕
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary ms-1">
+                                    <i class="fas fa-exclamation-circle"></i> 未認證
+                                </span>
+                                {% endif %}
                                 {% endif %}
                                 <span class="badge bg-warning ms-2">
                                     <i class="fas fa-star"></i> 精選
@@ -134,6 +151,23 @@
                                     {% endif %}
                                     {% if post.user.profile.user_type == 'business' %}
                                     <span class="badge bg-primary ms-1">商家</span>
+                                    {% if post.user.profile.verification_status == 'verified' %}
+                                    <span class="badge bg-success ms-1">
+                                        <i class="fas fa-check-circle"></i> 已認證
+                                    </span>
+                                    {% elif post.user.profile.verification_status == 'pending' %}
+                                    <span class="badge bg-warning ms-1">
+                                        <i class="fas fa-clock"></i> 審核中
+                                    </span>
+                                    {% elif post.user.profile.verification_status == 'rejected' %}
+                                    <span class="badge bg-danger ms-1">
+                                        <i class="fas fa-times-circle"></i> 已拒絕
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary ms-1">
+                                        <i class="fas fa-exclamation-circle"></i> 未認證
+                                    </span>
+                                    {% endif %}
                                     {% endif %}
                                 </div>
                                 <small class="text-muted">{{ post.created_at|date:"m-d" }}</small>
@@ -194,6 +228,23 @@
                                     {% endif %}
                                     {% if post.user.profile.user_type == 'business' %}
                                     <span class="badge bg-primary ms-1">商家</span>
+                                    {% if post.user.profile.verification_status == 'verified' %}
+                                    <span class="badge bg-success ms-1">
+                                        <i class="fas fa-check-circle"></i> 已認證
+                                    </span>
+                                    {% elif post.user.profile.verification_status == 'pending' %}
+                                    <span class="badge bg-warning ms-1">
+                                        <i class="fas fa-clock"></i> 審核中
+                                    </span>
+                                    {% elif post.user.profile.verification_status == 'rejected' %}
+                                    <span class="badge bg-danger ms-1">
+                                        <i class="fas fa-times-circle"></i> 已拒絕
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary ms-1">
+                                        <i class="fas fa-exclamation-circle"></i> 未認證
+                                    </span>
+                                    {% endif %}
                                     {% endif %}
                                 </div>
                                 <small class="text-muted">{{ post.created_at|date:"Y-m-d H:i" }}</small>
