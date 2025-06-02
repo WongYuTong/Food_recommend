@@ -3,8 +3,8 @@ import json
 from .tools import GooglePlacesAPI, GoogleSearchAPI, LLMFactory, MenuScraperTool
 from .preference_service import PreferenceService
 
-class RestaurantRecommendationController:
-    """餐廳推薦系統控制器，用於協調不同的API調用"""
+class FoodRecommendationController:
+    """美食推薦系統控制器，用於協調不同的API調用"""
     
     def __init__(self):
         """初始化控制器及其工具"""
@@ -503,15 +503,16 @@ class RestaurantRecommendationController:
             
             回答格式要求:
             - 使用繁體中文
-            - 只需提供簡短介紹，例如「為您推薦以下台北平價火鍋店：」
-            - 不要在文字中重複餐廳名稱、評分、地址等卡片上已顯示的資訊
-            - 如果用戶詢問特定菜品，只需簡短提及「這些餐廳提供您想要的菜品」
-            - 如果用戶有特定偏好(如不要辣)，只需簡短提及「這些餐廳符合您的偏好」
+            - 針對用戶的特定需求給出精確回應
+            - 如果用戶詢問特定菜品，優先推薦確認有該菜品的餐廳
+            - 如果用戶有特定偏好(如不要辣)，明確指出推薦餐廳符合這些條件
+            - 如果有菜單爬取結果，提及確認該餐廳有用戶想要的菜品
+            - 如果有網路評價，簡要提及相關評價內容
             
             注意:
-            - 回答必須非常簡短，因為詳細資訊已在卡片上顯示
-            - 不要列出餐廳名稱、地址、評分等資訊
+            - 針對性回應用戶需求，不要提供無關信息
             - 不要提及API或爬蟲等技術詞彙
+            - 如果確認餐廳有用戶想要的菜品，請特別強調這一點
             """
             
             # 格式化工具結果為字串
