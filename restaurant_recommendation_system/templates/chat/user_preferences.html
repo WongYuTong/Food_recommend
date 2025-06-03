@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}我的飲食偏好{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-heart me-2"></i>我的飲食偏好</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        系統會自動學習您的偏好，以下是根據您的使用行為識別的喜好。您對餐廳的收藏、評論和查詢都會影響這些偏好。
+                    </div>
+                    
+                    {% if preferences %}
+                        <div class="mb-4">
+                            <h5 class="border-bottom pb-2">料理類型偏好</h5>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                {% for cuisine, score in preferences.cuisines.items %}
+                                    <div class="card border-primary" style="width: 10rem;">
+                                        <div class="card-body p-2 text-center">
+                                            <h6 class="card-title mb-0">{{ cuisine }}</h6>
+                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div class="progress-bar bg-primary" style="width: {{ score }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted">尚未有足夠資料識別您的料理類型喜好</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="border-bottom pb-2">價格偏好</h5>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                {% for price, score in preferences.price_ranges.items %}
+                                    <div class="card border-success" style="width: 10rem;">
+                                        <div class="card-body p-2 text-center">
+                                            <h6 class="card-title mb-0">
+                                                {% if price == 'low' %}平價 ($)
+                                                {% elif price == 'medium' %}中價 ($$)
+                                                {% elif price == 'high' %}高價 ($$$)
+                                                {% elif price == 'luxury' %}奢華 ($$$$)
+                                                {% endif %}
+                                            </h6>
+                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div class="progress-bar bg-success" style="width: {{ score }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted">尚未有足夠資料識別您的價格偏好</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="border-bottom pb-2">地區偏好</h5>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                {% for location, score in preferences.locations.items %}
+                                    <div class="card border-warning" style="width: 10rem;">
+                                        <div class="card-body p-2 text-center">
+                                            <h6 class="card-title mb-0">{{ location }}</h6>
+                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div class="progress-bar bg-warning" style="width: {{ score }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted">尚未有足夠資料識別您的地區偏好</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        {% if preferences.keywords %}
+                        <div class="mb-4">
+                            <h5 class="border-bottom pb-2">關鍵詞偏好</h5>
+                            <div class="d-flex flex-wrap gap-1 mt-3">
+                                {% for keyword, score in preferences.keywords.items %}
+                                    <span class="badge bg-info px-3 py-2 fs-6">{{ keyword }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+                            <h5>尚未收集到足夠的偏好資料</h5>
+                            <p class="text-muted mb-4">
+                                與AI助手多互動、發布貼文並收藏喜歡的餐廳，以幫助系統了解您的喜好
+                            </p>
+                            <a href="{% url 'chat_room' %}" class="btn btn-primary">
+                                <i class="fas fa-comments me-2"></i>與AI助手對話
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <a href="{% url 'profile' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i>返回個人資料
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
