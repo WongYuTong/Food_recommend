@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useRouter, Link } from 'expo-router';
-import CustomInput from '../src/components/CustomInput';
-import CustomButton from '../src/components/CustomButton';
-import { login } from '../src/api/auth';
-import { sharedStyles } from '../src/styles/sharedStyles';
+import CustomInput from '../components/CustomInput';
+import CustomButton from '../components/CustomButton';
+import { login } from '../api/auth';
+import { globalStyles } from "@/constants/styles";
 
 const LoginScreen = () => {
   const [username, setUsername] = useState('');
@@ -30,25 +30,27 @@ const LoginScreen = () => {
   };
 
   return (
-    <SafeAreaView style={sharedStyles.container}>
+    <SafeAreaView style={globalStyles.container}>
       <View>
-        <Text style={sharedStyles.title}>登入 QuickGnaw</Text>
-        {error ? <Text style={sharedStyles.errorText}>{error}</Text> : null}
+        <Text style={globalStyles.title}>登入 QuickGnaw</Text>
+        {error ? <Text style={globalStyles.errorText}>{error}</Text> : null}
         <CustomInput
           value={username}
           onChangeText={setUsername}
           placeholder="帳號"
+          style={globalStyles.input}
         />
         <CustomInput
           value={password}
           onChangeText={setPassword}
           placeholder="密碼"
           secureTextEntry
+          style={globalStyles.input}
         />
-        <CustomButton title="登入" onPress={handleLogin} />
+        <CustomButton title="登入" onPress={handleLogin} style={globalStyles.button} textStyle={globalStyles.buttonText} />
         <Link href="/register" asChild>
             <TouchableOpacity>
-                <Text style={sharedStyles.linkText}>還沒有帳號？點此註冊</Text>
+                <Text style={globalStyles.linkText}>還沒有帳號？點此註冊</Text>
             </TouchableOpacity>
         </Link>
       </View>
