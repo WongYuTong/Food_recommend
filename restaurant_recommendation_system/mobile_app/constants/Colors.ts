@@ -14,6 +14,7 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
+    border: '#e0e0e0', // 或其他合適的顏色
   },
   dark: {
     text: '#ECEDEE',
