@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from .models import Profile, Follow, BusinessVerification, Notification, Report, Announcement, FavoriteRestaurant
-from post.models import Post, FavoritePost, Comment, PostReaction, CommentReaction
+from post.models import Post, FavoritePost, Comment, PostReaction
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse, Http404
@@ -913,8 +913,9 @@ def admin_dashboard(request):
     
     # 互動統計
     total_favorites_count = FavoritePost.objects.count()
-    total_reactions_count = PostReaction.objects.count() + CommentReaction.objects.count()
-    
+    total_follows_count = Follow.objects.count()
+    total_reactions_count = PostReaction.objects.count()
+
     # 最近活動
     recent_reports = Report.objects.order_by('-created_at')[:5]
     recent_verifications = BusinessVerification.objects.order_by('-submitted_at')[:5]
@@ -940,6 +941,7 @@ def admin_dashboard(request):
         
         # 互動統計
         'total_favorites_count': total_favorites_count,
+        'total_follows_count': total_follows_count,
         'total_reactions_count': total_reactions_count,
         
         # 最近活動

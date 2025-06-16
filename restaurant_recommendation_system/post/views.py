@@ -5,7 +5,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse, Http404
 from django.conf import settings
 from django.db.models import Count, Q, Prefetch
-from post.models import Post, FavoritePost, Comment, PostReaction, CommentReaction
+from post.models import Post, FavoritePost, Comment, PostReaction
 from user.models import Notification
 from post.forms import PostCreateForm, CommentForm
 
@@ -175,6 +175,9 @@ def add_reaction(request, post_id):
     if request.method == 'POST':
         post = get_object_or_404(Post, id=post_id)
         reaction_type = request.POST.get('reaction_type')
+        print("reaction_type:", reaction_type)
+        print("post:", post)
+        print("request.user:", request.user)
         valid_reactions = dict(PostReaction.REACTION_CHOICES).keys()
         if reaction_type not in valid_reactions:
             return JsonResponse({'status': 'error', 'message': '無效的表情符號類型'})

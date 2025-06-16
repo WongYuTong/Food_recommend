@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
 
 # 貼文與留言
 class Post(models.Model):
@@ -66,27 +68,6 @@ class PostReaction(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.get_reaction_type_display()} - {self.post.title}"
 
-# 用戶對評論的表情符號反應
-class CommentReaction(models.Model):
-    """用戶對評論的表情符號反應"""
-    REACTION_CHOICES = (
-        ('like', '👍 讚'),
-        ('love', '❤️ 愛心'),
-        ('haha', '😄 哈哈'),
-        ('wow', '😲 哇'),
-        ('sad', '😢 傷心'),
-        ('angry', '😠 怒')
-    )
-    
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='reactions')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    reaction_type = models.CharField(max_length=10, choices=REACTION_CHOICES)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        # 確保每個用戶只能對同一評論有一種反應
-        unique_together = ('user', 'comment')
-
 # 用戶收藏的貼文
 class FavoritePost(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
@@ -100,3 +81,13 @@ class FavoritePost(models.Model):
     
     def __str__(self):
         return f'{self.user.username} favorited {self.post.title}'
+
+@login_required
+def add_reaction(request, post_id):
+    if request.method == 'POST':
+        post = get_object_or_404(Post, id=post_id)
+        reaction_type = request.POST.get('reaction_type')
+        print("reaction_type:", reaction_type)
+        print("post:", post)
+        print("request.user:", request.user)
+        # ...後續程式碼...
