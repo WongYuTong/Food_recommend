@@ -1,4 +1,4 @@
- /* 貼文詳情頁樣式 */ 
+/* 貼文詳情頁樣式 */ 
 .post-layout {
     margin-bottom: 30px;
 }
@@ -127,4 +127,13 @@
 .btn-group .dropdown-menu {
     z-index: 9999 !important; /* 確保高於其他內容 */
     position: absolute !important; /* 強制絕對定位 */
+}
+
+.card.shadow.mb-4.other-posts-card {
+    position: static !important;
+    z-index: auto !important;
+}
+
+.dropdown-menu.reaction-menu {
+    z-index: 9999 !important;
 }
