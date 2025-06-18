@@ -172,11 +172,8 @@
                         
                         <!-- 收藏按鈕 -->
                         {% if request.user.is_authenticated %}
-                            <button id="favorite-button" class="btn {% if is_favorited %}btn-danger{% else %}btn-outline-danger{% endif %}">
-                                <i class="fas fa-heart me-1"></i>
-                                <span id="favorite-text">
-                                    {% if is_favorited %}取消收藏{% else %}收藏{% endif %}
-                                </span>
+                            <button id="favorite-button" class="btn btn-outline-danger">
+                                <i id="favorite-icon" class="far fa-heart"></i>
                             </button>
                         {% else %}
                             <a href="{% url 'login' %}" class="btn btn-outline-secondary">

@@ -1,7 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
 
 # 貼文與留言
 class Post(models.Model):
@@ -70,24 +68,9 @@ class PostReaction(models.Model):
 
 # 用戶收藏的貼文
 class FavoritePost(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='favorited_by')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='favorited_by')
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        # 確保每個用戶只能收藏同一貼文一次
-        unique_together = ('user', 'post')
-        ordering = ['-created_at']
-    
-    def __str__(self):
-        return f'{self.user.username} favorited {self.post.title}'
 
-@login_required
-def add_reaction(request, post_id):
-    if request.method == 'POST':
-        post = get_object_or_404(Post, id=post_id)
-        reaction_type = request.POST.get('reaction_type')
-        print("reaction_type:", reaction_type)
-        print("post:", post)
-        print("request.user:", request.user)
-        # ...後續程式碼...
+    class Meta:
+        unique_together = ('user', 'post')

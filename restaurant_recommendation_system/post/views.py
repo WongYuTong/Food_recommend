@@ -278,3 +278,14 @@ def delete_comment(request, comment_id):
     else:
         messages.error(request, "您沒有權限刪除此評論。")
     return redirect(request.META.get('HTTP_REFERER', '/'))
+
+def add_favorite(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    FavoritePost.objects.get_or_create(user=request.user, post=post)
+    return JsonResponse({'status': 'success', 'message': '已收藏'})
+
+@login_required
+def remove_favorite(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    FavoritePost.objects.filter(user=request.user, post=post).delete()
+    return JsonResponse({'status': 'success', 'message': '已取消收藏'})
