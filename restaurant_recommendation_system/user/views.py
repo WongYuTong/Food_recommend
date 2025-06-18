@@ -139,7 +139,7 @@ def profile(request):
         'posts': posts
     }
     
-    return render(request, 'user/profile.html', context)
+    return render(request, 'user/profile.html', {'profile_user': ...})
 
 # 公開用戶個人頁面
 def public_profile(request, username):
