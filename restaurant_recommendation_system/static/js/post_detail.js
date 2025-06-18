@@ -132,25 +132,28 @@ function updateReactionsUI(reactionsCount, totalReactions, userReaction) {
 
 // 收藏/取消收藏貼文
 function toggleFavorite(postId, csrfToken) {
-    fetch(`/favorite/${postId}/`, {
+    const icon = document.getElementById('favorite-icon');
+    const isFavorite = icon.classList.contains('fas'); // fas = 填滿, far = 空心
+    const url = isFavorite
+        ? `/post/${postId}/favorite/remove/`
+        : `/post/${postId}/favorite/add/`;
+    fetch(url, {
         method: 'POST',
         headers: {
+            'X-CSRFToken': csrfToken,
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': csrfToken
         }
     })
     .then(response => response.json())
     .then(data => {
-        if(data.status === 'success') {
-            const favoriteButton = document.getElementById('favorite-button');
-            const favoriteText = document.getElementById('favorite-text');
-            
-            if(data.is_favorite) {
-                favoriteButton.classList.replace('btn-outline-danger', 'btn-danger');
-                favoriteText.textContent = '取消收藏';
+        if (data.status === 'success') {
+            // 切換 icon 樣式
+            if (isFavorite) {
+                icon.classList.remove('fas');
+                icon.classList.add('far');
             } else {
-                favoriteButton.classList.replace('btn-danger', 'btn-outline-danger');
-                favoriteText.textContent = '收藏';
+                icon.classList.remove('far');
+                icon.classList.add('fas');
             }
         }
     });
