@@ -196,12 +196,33 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <!-- 這裡可以通過Ajax加載同一用戶的其他貼文 -->
-                        <div class="col-12 text-center">
-                            <a href="{% url 'public_profile' post.user.username %}" class="btn btn-outline-primary">
-                                <i class="fas fa-user me-1"></i> 訪問 {{ post.user.username }} 的個人頁面
-                            </a>
-                        </div>
+                        {% if other_posts %}
+                            {% for op in other_posts %}
+                            <div class="col-12 mb-2">
+                                <a href="{% url 'view_post' op.id %}" class="text-decoration-none">
+                                    <div class="d-flex align-items-center">
+                                        {% if op.image %}
+                                            <img src="{{ op.image.url }}" alt="{{ op.title }}" class="me-2 rounded" width="48" height="48" style="object-fit: cover;">
+                                        {% endif %}
+                                        <div>
+                                            <span class="fw-bold">{{ op.title }}</span>
+                                            <br>
+                                            <small class="text-muted">{{ op.created_at|date:"Y-m-d H:i" }}</small>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12 text-center text-muted">
+                                此用戶尚未發布其他貼文。
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 text-center mt-2">
+                        <a href="{% url 'public_profile' post.user.username %}" class="btn btn-outline-primary">
+                            <i class="fas fa-user me-1"></i> 訪問 {{ post.user.username }} 的個人頁面
+                        </a>
                     </div>
                 </div>
             </div>
