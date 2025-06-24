@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}餐廳推薦小幫手{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="/static/css/chat_style.css">
+{% endblock %}
+
+{% block content %}
+<div class="chat-main-container">
+    <!-- 聊天歷史記錄面板 -->
+    <div class="chat-history-panel" id="chatHistoryPanel">
+        <div class="history-header">
+            <h5><i class="fas fa-history me-2"></i>聊天記錄</h5>
+            <button class="close-btn" id="closeHistoryPanel">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="new-chat-btn" id="newChatBtn">
+            <i class="fas fa-plus"></i> 新對話
+        </div>
+        <div class="history-content">
+            <!-- 聊天記錄項目 -->
+            {% if chat_history %}
+                {% for chat in chat_history %}
+                    <div class="history-item" data-chat-id="{{ chat.id }}">
+                        <div style="position: relative; width: 100%;">
+                            <div class="history-title">{{ chat.title }}</div>
+                            <div class="history-time">{{ chat.date|date:"Y-m-d H:i" }}</div>
+                            <span class="delete-chat-btn" data-chat-id="{{ chat.id }}" title="刪除此對話" data-bs-toggle="modal" data-bs-target="#deleteChatModal">
+                                <i class="fas fa-times fa-xs"></i>
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="history-empty">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>暫無聊天記錄</p>
+                    <p>開始新對話來獲取餐廳推薦吧！</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 聊天記錄切換按鈕 -->
+    <button class="toggle-history-btn" id="toggleHistoryBtn">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- 聊天視窗區域 -->
+    <div class="chat-window" id="chatWindow">
+        <div class="chat-container">
+            <!-- 隱藏的用戶偏好數據 -->
+            <div id="userFavoriteFoods" data-value="{{ user.profile.favorite_foods|default:'None' }}" style="display:none;"></div>
+            <div id="userFoodRestrictions" data-value="{{ user.profile.food_restrictions|default:'None' }}" style="display:none;"></div>
+            
+            {% if user.is_authenticated %}
+            <!-- 聊天室標題 -->
+            <div class="chat-header">
+                <div class="d-flex align-items-center justify-content-center w-100">
+                    <h4><i class="fas fa-robot me-2"></i>餐廳推薦小幫手</h4>
+                </div>
+            </div>
+            
+            <!-- 聊天訊息區域 -->
+            <div class="chat-messages-container">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- 機器人歡迎訊息 -->
+                    <div class="message bot-message">
+                        <img src="/static/images/bot_avatar.png" alt="Bot" class="avatar">
+                        <div class="content">
+                            <div class="sender">
+                                餐廳推薦小幫手
+                                <span class="time">{% now "H:i" %}</span>
+                            </div>
+                            <div class="text">
+                                <p>您好！歡迎使用餐廳推薦小幫手。我可以：</p>
+                                <ul>
+                                    <li>根據您的偏好推薦適合的餐廳</li>
+                                    <li>提供附近熱門餐廳的訊息</li>
+                                    <li>幫您尋找特定類型的美食</li>
+                                    <li>提供餐廳的營業時間、評價和菜單建議</li>
+                                </ul>
+                                <p style="margin-bottom: 0;">請告訴我您想要尋找什麼類型的餐廳或美食？</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 聊天輸入區域 -->
+            <div class="chat-input-wrapper">
+                <div class="chat-input-container">
+                    <button class="chat-tool-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <input type="text" class="chat-input" id="userInput" placeholder="輸入訊息...">
+                    <div class="chat-tools">
+                        <button class="chat-tool-btn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                    </div>
+                    <button class="send-button" id="sendButton">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 底部頁腳 -->
+            <div class="chat-footer">
+                © 智慧餐廳推薦系統 | NTUBIMD 114412
+            </div>
+            
+            {% else %}
+            <!-- 未登入提示 -->
+            <div class="login-prompt">
+                <h3><i class="fas fa-lock me-2"></i>請先登入以使用聊天功能</h3>
+                <p>登入後您可以使用餐廳推薦小幫手獲取個性化的推薦</p>
+                <div>
+                    <a href="{% url 'login' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-sign-in-alt me-2"></i>登入
+                    </a>
+                    <a href="{% url 'register' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-plus me-2"></i>註冊
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 移動端切換按鈕 -->
+    <button class="mobile-toggle-btn" id="mobileToggleBtn">
+        <i class="fas fa-bars"></i>
+    </button>
+</div>
+
+<!-- 刪除確認模態視窗 - 移至頁面底部 -->
+<div class="modal fade" id="deleteChatModal" tabindex="-1" aria-labelledby="deleteChatModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteChatModalLabel"><i class="fas fa-trash-alt me-2"></i>確認刪除</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                </div>
+                <p class="text-center fs-5 mb-3">您確定要刪除此聊天記錄嗎？</p>
+                <div class="bg-light p-3 rounded">
+                    <p class="mb-0"><i class="fas fa-info-circle text-primary me-2"></i><strong>注意：</strong>此操作無法撤銷，刪除後將無法恢復此對話記錄。</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>取消
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash-alt me-2"></i>確認刪除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if user.is_authenticated %}
+<script src="/static/js/chat.js"></script>
+{% endif %}
+{% endblock %} 

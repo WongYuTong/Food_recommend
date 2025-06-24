@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}餐廳推薦小幫手使用指南{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-book me-2"></i>餐廳推薦小幫手使用指南</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        這是一份完整的餐廳推薦小幫手使用說明，幫助您充分利用本系統的智能推薦功能。
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2"><i class="fas fa-clipboard-list me-2 text-primary"></i>使用步驟</h5>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">步驟 1：進入對話介面</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>點擊側邊欄的「美食推薦小幫手」選項或本頁面底部的「開始使用」按鈕，進入對話介面。</p>
+                                <div class="text-center mb-2">
+                                    <img src="{% static 'images/guide/step1.jpg' %}" alt="進入對話介面" class="img-fluid border rounded" style="max-width: 80%;" onerror="this.style.display='none'">
+                                </div>
+                                <div class="bg-light p-3 rounded">
+                                    <p class="mb-0"><i class="fas fa-lightbulb text-warning me-2"></i><strong>提示：</strong>建議登入帳戶後使用，系統能夠記錄您的偏好，提供更個人化的推薦。</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">步驟 2：輸入您的需求</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>在對話框中輸入您的餐廳需求，可以包含以下資訊：</p>
+                                <ul>
+                                    <li><strong>地區：</strong>指定位置，例如「台北市大安區」、「台中西區」</li>
+                                    <li><strong>料理類型：</strong>如「日式料理」、「義大利麵」、「火鍋」等</li>
+                                    <li><strong>價格範圍：</strong>如「平價」、「高級」、「奢華」等</li>
+                                    <li><strong>特殊需求：</strong>如「適合家庭聚餐」、「寵物友善」、「提供素食選擇」等</li>
+                                </ul>
+                                <div class="bg-light p-3 rounded">
+                                    <p class="mb-0"><i class="fas fa-lightbulb text-warning me-2"></i><strong>提示：</strong>詳細的描述能幫助系統提供更精準的推薦結果。</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">步驟 3：查看推薦結果</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>系統會根據您的需求，顯示最符合的餐廳推薦卡片，每張卡片包含：</p>
+                                <ul>
+                                    <li>餐廳名稱、評分與價格</li>
+                                    <li>地址與聯絡資訊</li>
+                                    <li>營業時間</li>
+                                    <li>餐廳照片</li>
+                                    <li>用戶評價摘要</li>
+                                </ul>
+                                <div class="text-center mb-2">
+                                    <img src="{% static 'images/guide/step3.jpg' %}" alt="推薦餐廳卡片" class="img-fluid border rounded" style="max-width: 80%;" onerror="this.style.display='none'">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">步驟 4：查看地圖與導航</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>點擊推薦卡片上的「查看地圖」按鈕，可以：</p>
+                                <ul>
+                                    <li>在地圖上查看餐廳位置</li>
+                                    <li>點選「導航前往」獲取路線指引</li>
+                                </ul>
+                                <div class="bg-light p-3 rounded">
+                                    <p class="mb-0"><i class="fas fa-lightbulb text-warning me-2"></i><strong>提示：</strong>允許系統取得您的位置權限，可以提供更精確的附近餐廳推薦。</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">步驟 5：進一步的對話互動</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>您可以與系統進行更深入的對話，例如：</p>
+                                <ul>
+                                    <li>詢問特定餐廳的更多資訊：「這家餐廳有什麼招牌菜？」</li>
+                                    <li>調整推薦結果：「我想找更平價一點的選擇」</li>
+                                    <li>進行比較：「這兩家餐廳哪個更適合約會？」</li>
+                                    <li>詢問交通方式：「從捷運站怎麼去這家餐廳？」</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">步驟 6：收藏喜愛的餐廳</h6>
+                            </div>
+                            <div class="card-body">
+                                <p>喜歡某家推薦的餐廳，可以：</p>
+                                <ul>
+                                    <li>點擊「收藏」按鈕將餐廳加入您的收藏列表</li>
+                                    <li>系統會記錄您的喜好，優化未來的推薦結果</li>
+                                    <li>您可以在「我的收藏」頁面查看所有收藏的餐廳</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2"><i class="fas fa-lightbulb me-2 text-warning"></i>進階使用技巧</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title"><i class="fas fa-map-marker-alt text-danger me-2"></i>地理位置查詢</h6>
+                                        <p class="card-text small">輸入「附近的日本料理」或「目前位置附近有哪些咖啡廳」，系統會使用您的當前位置進行搜尋。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title"><i class="fas fa-clock text-primary me-2"></i>時段查詢</h6>
+                                        <p class="card-text small">您可以指定用餐時段，例如「今晚營業的義大利餐廳」或「提供早午餐的咖啡廳」。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title"><i class="fas fa-users text-success me-2"></i>特殊場合</h6>
+                                        <p class="card-text small">指定用餐場景，如「適合商務會議的餐廳」、「適合約會的浪漫餐廳」或「適合家庭聚餐的餐廳」。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title"><i class="fas fa-leaf text-success me-2"></i>飲食限制</h6>
+                                        <p class="card-text small">說明特殊飲食需求，如「提供素食選擇的泰式料理」或「有無麩質選項的餐廳」。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2"><i class="fas fa-question-circle me-2 text-info"></i>常見問答</h5>
+                        <div class="accordion" id="faqAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqOne">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                        系統如何推薦餐廳？
+                                    </button>
+                                </h2>
+                                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="faqOne" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        系統使用Google Gemini AI技術分析您的需求，結合Google Places API的餐廳資料庫和您的個人偏好，綜合評估後提供最符合的推薦結果。
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqTwo">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                        我可以搜尋特定餐廳嗎？
+                                    </button>
+                                </h2>
+                                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="faqTwo" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        可以，直接輸入餐廳名稱，系統會搜尋相關資訊，如「幫我查鼎泰豐的資訊」或「找台北的鼎泰豐」。
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqThree">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                        系統如何學習我的偏好？
+                                    </button>
+                                </h2>
+                                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="faqThree" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        系統會分析您的對話內容、收藏餐廳和瀏覽習慣，自動學習您喜好的料理類型、價格範圍和用餐氛圍等，提供越來越符合您個人口味的推薦。
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-5">
+                        <a href="{% url 'chat_room' %}" class="btn btn-primary btn-lg px-4">
+                            <i class="fas fa-comments me-2"></i>開始使用餐廳推薦小幫手
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

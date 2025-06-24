@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ announcement.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'view_announcements' %}">系統公告</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ announcement.title }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4 {% if announcement.is_pinned %}border-left-primary{% elif announcement.announcement_type == 'maintenance' %}border-left-warning{% endif %}">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            {% if announcement.is_pinned %}
+                                <i class="fas fa-thumbtack text-danger me-2" title="置頂公告"></i>
+                            {% endif %}
+                            {{ announcement.title }}
+                        </h4>
+                        {% if announcement.announcement_type == 'system' %}
+                            <span class="badge bg-primary">{{ announcement.get_announcement_type_display }}</span>
+                        {% elif announcement.announcement_type == 'maintenance' %}
+                            <span class="badge bg-warning">{{ announcement.get_announcement_type_display }}</span>
+                        {% elif announcement.announcement_type == 'update' %}
+                            <span class="badge bg-success">{{ announcement.get_announcement_type_display }}</span>
+                        {% elif announcement.announcement_type == 'promotion' %}
+                            <span class="badge bg-info">{{ announcement.get_announcement_type_display }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ announcement.get_announcement_type_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        {{ announcement.content|linebreaks }}
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-muted small">
+                        <div class="mb-1">
+                            <i class="fas fa-user me-1"></i> 由 {{ announcement.created_by.username }} 發布
+                        </div>
+                        <div class="mb-1">
+                            <i class="fas fa-clock me-1"></i> 發布時間: {{ announcement.created_at|date:"Y-m-d H:i" }}
+                        </div>
+                        {% if announcement.updated_at and announcement.updated_at != announcement.created_at %}
+                            <div class="mb-1">
+                                <i class="fas fa-edit me-1"></i> 更新時間: {{ announcement.updated_at|date:"Y-m-d H:i" }}
+                            </div>
+                        {% endif %}
+                        {% if announcement.start_date or announcement.end_date %}
+                            <div class="mb-1">
+                                <i class="fas fa-calendar-alt me-1"></i> 
+                                {% if announcement.start_date and announcement.end_date %}
+                                    有效期間: {{ announcement.start_date|date:"Y-m-d" }} 至 {{ announcement.end_date|date:"Y-m-d" }}
+                                {% elif announcement.start_date %}
+                                    有效期間: {{ announcement.start_date|date:"Y-m-d" }} 起
+                                {% elif announcement.end_date %}
+                                    有效期間: {{ announcement.end_date|date:"Y-m-d" }} 前
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'view_announcements' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>返回公告列表
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm sticky-top" style="top: 1rem;">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>公告資訊</h5>
+                </div>
+                <div class="card-body">
+                    {% if announcement.announcement_type == 'maintenance' %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-tools me-2"></i>此公告是關於系統維護的重要通知，請留意相關時間與影響。
+                        </div>
+                    {% elif announcement.announcement_type == 'update' %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-rocket me-2"></i>此公告包含平台功能更新或改進的資訊。
+                        </div>
+                    {% elif announcement.announcement_type == 'promotion' %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-gift me-2"></i>此公告包含平台活動或促銷資訊。
+                        </div>
+                    {% endif %}
+                    
+                    {% if announcement.is_pinned %}
+                        <div class="mb-3">
+                            <i class="fas fa-thumbtack text-danger me-2"></i>
+                            <strong>此為置頂公告</strong>，代表此訊息非常重要。
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'view_announcements' %}" class="btn btn-outline-primary">
+                            查看所有公告
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

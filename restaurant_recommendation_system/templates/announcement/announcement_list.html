@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}系統公告{% endblock %}
+
+{% block extra_css %}
+<style>
+    .announcement-card {
+        transition: transform 0.2s;
+        margin-bottom: 1.5rem;
+    }
+    .announcement-card:hover {
+        transform: translateY(-5px);
+    }
+    .announcement-pinned {
+        border-left: 5px solid var(--primary-color);
+    }
+    .announcement-maintenance {
+        border-left: 5px solid var(--warning-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="fas fa-bullhorn me-2"></i>系統公告</h2>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            {% if announcements %}
+                {% for announcement in announcements %}
+                    <div class="card shadow-sm announcement-card {% if announcement.is_pinned %}announcement-pinned{% elif announcement.announcement_type == 'maintenance' %}announcement-maintenance{% endif %}">
+                        <div class="card-header {% if announcement.announcement_type == 'maintenance' %}bg-warning{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    {% if announcement.is_pinned %}
+                                        <i class="fas fa-thumbtack text-danger me-2" title="置頂公告"></i>
+                                    {% endif %}
+                                    {{ announcement.title }}
+                                </h5>
+                                {% if announcement.announcement_type == 'system' %}
+                                    <span class="badge bg-primary">{{ announcement.get_announcement_type_display }}</span>
+                                {% elif announcement.announcement_type == 'maintenance' %}
+                                    <span class="badge bg-warning">{{ announcement.get_announcement_type_display }}</span>
+                                {% elif announcement.announcement_type == 'update' %}
+                                    <span class="badge bg-success">{{ announcement.get_announcement_type_display }}</span>
+                                {% elif announcement.announcement_type == 'promotion' %}
+                                    <span class="badge bg-info">{{ announcement.get_announcement_type_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ announcement.get_announcement_type_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="announcement-content mb-3">
+                                {% if announcement.content|length > 300 %}
+                                    <div class="announcement-preview">
+                                        {{ announcement.content|slice:":300"|linebreaks }}
+                                        <a href="{% url 'view_announcement' announcement.id %}" class="text-primary">閱讀更多...</a>
+                                    </div>
+                                {% else %}
+                                    {{ announcement.content|linebreaks }}
+                                {% endif %}
+                            </div>
+                            <div class="text-muted small">
+                                <div>由 {{ announcement.created_by.username }} 於 {{ announcement.created_at|date:"Y-m-d H:i" }} 發布</div>
+                                {% if announcement.start_date or announcement.end_date %}
+                                    <div>
+                                        {% if announcement.start_date and announcement.end_date %}
+                                            有效期間: {{ announcement.start_date|date:"Y-m-d" }} 至 {{ announcement.end_date|date:"Y-m-d" }}
+                                        {% elif announcement.start_date %}
+                                            有效期間: {{ announcement.start_date|date:"Y-m-d" }} 起
+                                        {% elif announcement.end_date %}
+                                            有效期間: {{ announcement.end_date|date:"Y-m-d" }} 前
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>目前沒有系統公告
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>公告說明</h5>
+                </div>
+                <div class="card-body">
+                    <p>系統公告會發布關於平台的重要資訊，包括：</p>
+                    <ul>
+                        <li><i class="fas fa-bullhorn text-primary me-2"></i> <strong>系統公告</strong> - 一般系統通知</li>
+                        <li><i class="fas fa-tools text-warning me-2"></i> <strong>系統維護</strong> - 維護相關訊息</li>
+                        <li><i class="fas fa-rocket text-success me-2"></i> <strong>功能更新</strong> - 新功能或改進</li>
+                        <li><i class="fas fa-gift text-info me-2"></i> <strong>活動宣傳</strong> - 平台活動或促銷</li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-thumbtack text-danger me-2"></i>
+                        <div><strong>置頂公告</strong> 是重要訊息，請優先閱讀</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
