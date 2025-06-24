@@ -116,6 +116,7 @@ def logout_view(request):
 @login_required
 def profile(request):
     user_profile = request.user.profile
+    posts = Post.objects.filter(user=request.user).order_by('-created_at')
     
     if request.method == 'POST':
         u_form = UserUpdateForm(request.POST, instance=request.user)
@@ -139,23 +140,20 @@ def profile(request):
         'posts': posts
     }
     
-    return render(request, 'user/profile.html', {'profile_user': ...})
+    return render(request, 'user/profile.html', {
+        'user_profile': user_profile,
+        'posts': posts,
+    })
 
 # 公開用戶個人頁面
 def public_profile(request, username):
     """顯示指定用戶的公開個人頁面"""
-    try:
-        target_user = User.objects.get(username=username)
-    except User.DoesNotExist:
-        raise Http404("用戶不存在")
-    
-    # 獲取用戶資訊
+    target_user = get_object_or_404(User, username=username)
     profile = target_user.profile
-    is_business = (profile.user_type == 'business')
-    is_admin = (profile.user_type == 'admin')
-    
+    posts = Post.objects.filter(user=target_user).order_by('-created_at')  # 查詢該用戶所有貼文
+
     # 檢查是否為管理員頁面且訪問者不是管理員
-    if is_admin and not request.user.is_staff:
+    if profile.user_type == 'admin' and not request.user.is_staff:
         messages.error(request, "您沒有權限查看管理員的個人頁面")
         return redirect('explore')
     
@@ -166,9 +164,6 @@ def public_profile(request, username):
     is_following = False
     if request.user.is_authenticated:
         is_following = Follow.objects.filter(follower=request.user, followed=target_user).exists()
-    
-    # 獲取用戶發布的貼文
-    posts = Post.objects.filter(user=target_user).order_by('-is_pinned', '-created_at')
     
     # 檢查當前用戶是否已收藏各貼文
     if request.user.is_authenticated:
@@ -185,11 +180,9 @@ def public_profile(request, username):
     following_count = Follow.objects.filter(follower=target_user).count()
     
     context = {
-        'user': target_user,
+        'profile_user': target_user,  # 改名，不要用 'user'
         'profile': profile,
         'posts': posts,
-        'is_business': is_business,
-        'is_admin': is_admin,
         'is_self': is_self,
         'is_following': is_following,
         'followers_count': followers_count,
