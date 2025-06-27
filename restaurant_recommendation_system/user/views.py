@@ -306,55 +306,38 @@ def feed(request):
 
 # 探索頁面 - 顯示熱門貼文和推薦內容
 def explore(request):
-    """顯示熱門貼文和推薦內容（探索頁面）"""
-    # 如果不是管理員，則排除管理員的貼文
-    if request.user.is_authenticated and not request.user.is_staff:
-        admin_users = User.objects.filter(
-            Q(profile__user_type='admin') | Q(is_staff=True)
-        ).values_list('id', flat=True)
-        admin_filter = ~Q(user_id__in=admin_users)
+    post_type = request.GET.get('type')
+    sort = request.GET.get('sort')  # 'hot' or None
+
+    if sort == 'hot':
+        posts = Post.objects.annotate(
+            favorite_count=Count('favorited_by'),
+            comment_count=Count('comments'),
+            reaction_count=Count('reactions')
+        ).order_by('-favorite_count', '-comment_count', '-reaction_count', '-created_at')
+    elif post_type:
+        posts = Post.objects.filter(type=post_type).order_by('-created_at')
     else:
-        admin_filter = Q()
-    
-    # 獲取平台推薦的貼文
-    featured_posts = Post.objects.filter(admin_filter, is_platform_featured=True).select_related('user').order_by('-created_at')
-    
-    # 獲取最近熱門貼文（按收藏數排序）
-    popular_posts = Post.objects.filter(admin_filter).annotate(
-        favorite_count=Count('favorited_by')
-    ).filter(favorite_count__gt=0).select_related('user').order_by('-favorite_count', '-created_at')[:10]
-    
-    # 獲取最新發布的貼文
-    recent_posts = Post.objects.filter(admin_filter).select_related('user').order_by('-created_at')[:20]
-    
-    # 如果用戶已登入，標記是否收藏
-    if request.user.is_authenticated:
-        favorited_posts = FavoritePost.objects.filter(user=request.user).values_list('post_id', flat=True)
-        for post_list in [featured_posts, popular_posts, recent_posts]:
-            for post in post_list:
-                post.is_favorited = post.id in favorited_posts
-    
-    # 獲取活躍商家（具有認證的商家），排除管理員
-    active_businesses = User.objects.filter(
+        posts = Post.objects.all().order_by('-created_at')
+
+    recommended_businesses = User.objects.filter(
         profile__user_type='business',
-        profile__verification_status='verified',
-    )
-    
-    if request.user.is_authenticated and not request.user.is_staff:
-        active_businesses = active_businesses.exclude(
-            Q(profile__user_type='admin') | Q(is_staff=True)
-        )
-    
-    active_businesses = active_businesses.distinct()
-    
+        profile__verification_status='verified'
+    ).annotate(
+        followers_count=Count('followers')
+    ).order_by('-followers_count')[:5]
+
+    recommended_foodies = User.objects.filter(
+        profile__user_type='regular'
+    ).annotate(
+        followers_count=Count('followers')
+    ).order_by('-followers_count')[:5]
+
     context = {
-        'featured_posts': featured_posts,
-        'popular_posts': popular_posts,
-        'recent_posts': recent_posts,
-        'active_businesses': active_businesses,
-        'page_type': 'explore'
+        'posts': posts,
+        'recommended_businesses': recommended_businesses,
+        'recommended_foodies': recommended_foodies,
     }
-    
     return render(request, 'social/explore.html', context)
 
 
