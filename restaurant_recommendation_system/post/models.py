@@ -16,6 +16,12 @@ class Post(models.Model):
     location_lng = models.FloatField(null=True, blank=True, help_text="地點經度")
     location_place_id = models.CharField(max_length=300, blank=True, null=True, help_text="Google Places ID")
     
+    POST_TYPE_CHOICES = [
+        ('promotion', '優惠'),
+        ('experience', '用餐體驗'),
+    ]
+    type = models.CharField(max_length=20, choices=POST_TYPE_CHOICES, default='experience')
+
     def __str__(self):
         return self.title
 
