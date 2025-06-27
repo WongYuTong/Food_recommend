@@ -157,6 +157,9 @@ def view_post(request, post_id):
             return redirect('view_post', post_id=post.id)
         else:
             messages.error(request, '發布評論失敗，請檢查您的輸入。')
+    other_posts = Post.objects.filter(
+        user=post.user
+    ).exclude(id=post.id).order_by('-created_at')[:5]  # 取最新5篇
     context = {
         'post': post,
         'is_favorited': is_favorited,
@@ -165,7 +168,8 @@ def view_post(request, post_id):
         'comment_form': comment_form,
         'reactions_count': reactions_count,
         'total_reactions': total_reactions,
-        'user_reaction': user_reaction
+        'user_reaction': user_reaction,
+        'other_posts': other_posts,
     }
     return render(request, 'post/view_post.html', context)
 
