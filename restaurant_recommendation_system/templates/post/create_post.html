@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}建立貼文{% endblock %}
-
+{% load static %}
 {% block extra_css %}
 <style>
     #map {
@@ -39,9 +39,9 @@
                     <textarea name="content" class="form-control mb-3" rows="5" placeholder="分享您的美食體驗...">{{ form.content.value|default_if_none:'' }}</textarea>
                     <!-- 圖片上傳與預覽 -->
                     <div class="mb-3">
-                        <label class="form-label">圖片</label>
-                        <input type="file" name="image" id="image-upload" class="form-control">
-                        <div id="image-preview" class="mt-2"></div>
+                        <label class="form-label">圖片（最多三張）</label>
+                        <input type="file" id="image-upload" class="form-control" accept="image/*">
+                        <div id="image-preview" class="mt-2 d-flex flex-wrap"></div>
                     </div>
                     <!-- 地點選擇區域（可收合） -->
                     <button class="btn btn-link p-0 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#locationCollapse">
@@ -231,4 +231,5 @@
         );
     }
 </script>
+<script src="{% static 'js/post_create.js' %}"></script>
 {% endblock %}
