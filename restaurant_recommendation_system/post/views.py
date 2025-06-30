@@ -19,7 +19,7 @@ def create_post(request):
             post.user = request.user
             post.save()
             messages.success(request, '貼文已成功建立！')
-            return redirect('post_history')
+            return redirect('post:post_history')
     else:
         form = PostCreateForm()
     context = {
@@ -40,13 +40,13 @@ def edit_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
     if post.user != request.user:
         messages.error(request, '您沒有權限編輯此貼文')
-        return redirect('post_history')
+        return redirect('post:post_history')
     if request.method == 'POST':
         form = PostCreateForm(request.POST, request.FILES, instance=post)
         if form.is_valid():
             form.save()
             messages.success(request, '貼文已成功更新！')
-            return redirect('view_post', post_id=post.id)
+            return redirect('post:view_post', post_id=post.id)
     else:
         form = PostCreateForm(instance=post)
     context = {
@@ -65,7 +65,7 @@ def toggle_post_pin(request, post_id):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'status': 'error', 'message': '您沒有權限修改此貼文'})
         messages.error(request, '您沒有權限修改此貼文')
-        return redirect('post_history')
+        return redirect('post:post_history')
     post.is_pinned = not post.is_pinned
     post.save()
     action = "置頂" if post.is_pinned else "取消置頂"
@@ -76,7 +76,7 @@ def toggle_post_pin(request, post_id):
             'message': f'已{action}貼文'
         })
     messages.success(request, f'已{action}貼文')
-    return redirect('post_history')
+    return redirect('post:post_history')
 
 # 管理員刪除貼文
 @staff_member_required
@@ -154,7 +154,7 @@ def view_post(request, post_id):
                         message=f"{request.user.username} 評論了您的貼文: {new_comment.content[:50]}..."
                     )
             messages.success(request, '評論已發布！')
-            return redirect('view_post', post_id=post.id)
+            return redirect('post:view_post', post_id=post.id)
         else:
             messages.error(request, '發布評論失敗，請檢查您的輸入。')
     other_posts = Post.objects.filter(
