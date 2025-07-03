@@ -50,3 +50,29 @@ document.getElementById('image-upload').addEventListener('change', function(e) {
     // 清空 input 以便重複選同一張
     e.target.value = '';
 });
+
+document.getElementById('post-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    console.log('送出時的 uploadedImages:', uploadedImages); // ← 加在這裡
+    uploadedImages.forEach(file => {
+        formData.append('images', file);
+    });
+    fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    }).then(res => {
+        if (res.redirected) {
+            window.location.href = res.url;
+        } else if (res.status === 302) {
+            window.location.href = res.headers.get('Location');
+        } else {
+            res.text().then(text => {
+                alert('貼文送出失敗，請稍後再試');
+            });
+        }
+    });
+});

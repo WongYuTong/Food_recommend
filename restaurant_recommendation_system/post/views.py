@@ -5,7 +5,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse, Http404
 from django.conf import settings
 from django.db.models import Count, Q, Prefetch
-from post.models import Post, FavoritePost, Comment, PostReaction
+from post.models import Post, FavoritePost, Comment, PostReaction, PostImage
 from user.models import Notification
 from post.forms import PostCreateForm, CommentForm
 
@@ -18,14 +18,24 @@ def create_post(request):
             post = form.save(commit=False)
             post.user = request.user
             post.save()
+            images = request.FILES.getlist('images')
+            print('收到的圖片:', images)  # 檢查是否有收到檔案
+            for img in images[:3]:
+                print('新增圖片:', img)  # 檢查每張圖片是否被處理
+                PostImage.objects.create(post=post, image=img)
             messages.success(request, '貼文已成功建立！')
             return redirect('post:post_history')
+        else:
+            print(form.errors)
     else:
         form = PostCreateForm()
     context = {
         'form': form,
         'google_api_key': settings.GOOGLE_PLACES_API_KEY
     }
+    images = request.FILES.getlist('images')
+    print('收到的圖片:', images)
+    print(request.FILES)
     return render(request, 'post/create_post.html', context)
 
 # 用戶貼文清單
@@ -47,6 +57,8 @@ def edit_post(request, post_id):
             form.save()
             messages.success(request, '貼文已成功更新！')
             return redirect('post:view_post', post_id=post.id)
+        else:
+            print(form.errors)
     else:
         form = PostCreateForm(instance=post)
     context = {
@@ -262,7 +274,7 @@ def toggle_favorite(request, post_id):
             'is_favorite': is_favorite,
             'message': message
         })
-    return redirect(request.META.get('HTTP_REFERER', 'post_history'))
+    return redirect(request.META.get('HTTP_REFERER', 'post:post_history'))
 
 # 我的收藏貼文清單
 @login_required
