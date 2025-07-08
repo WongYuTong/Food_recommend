@@ -82,8 +82,12 @@
                 </div>
                 
                 <!-- 貼文圖片 -->
-                {% if post.image %}
-                    <img src="{{ post.image.url }}" class="card-img-top" alt="{{ post.title }}" style="max-height: 500px; object-fit: contain;">
+                {% if post.images.all %}
+                    <div class="d-flex flex-wrap mb-3">
+                        {% for img in post.images.all %}
+                            <img src="{{ img.image.url }}" class="card-img-top me-2 mb-2" alt="{{ post.title }}" style="max-height: 220px; max-width: 220px; object-fit: cover; border-radius: 12px;">
+                        {% endfor %}
+                    </div>
                 {% endif %}
                 
                 <!-- 貼文內容 -->
@@ -201,8 +205,8 @@
                             <div class="col-12 mb-2">
                                 <a href="{% url 'post:view_post' op.id %}" class="text-decoration-none">
                                     <div class="d-flex align-items-center">
-                                        {% if op.image %}
-                                            <img src="{{ op.image.url }}" alt="{{ op.title }}" class="me-2 rounded" width="48" height="48" style="object-fit: cover;">
+                                        {% if op.images.all %}
+                                            <img src="{{ op.images.first.image.url }}" alt="{{ op.title }}" class="me-2 rounded" width="48" height="48" style="object-fit: cover;">
                                         {% endif %}
                                         <div>
                                             <span class="fw-bold">{{ op.title }}</span>

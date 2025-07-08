@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}編輯貼文{% endblock %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/post_common.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <form id="post-form" method="post" enctype="multipart/form-data" action="{% url 'post:edit_post' post.id %}">
+                        {% csrf_token %}
+                        <!-- 標題 -->
+                        <input type="text" name="title" class="form-control form-control-lg mb-3" placeholder="貼文標題（必填）" value="{{ form.title.value|default_if_none:'' }}">
+                        <!-- 內容 -->
+                        <textarea name="content" class="form-control mb-3" rows="5" placeholder="分享您的美食體驗...">{{ form.content.value|default_if_none:'' }}</textarea>
+                        <!-- 舊圖片區塊 -->
+                        <div class="mb-3">
+                            <label class="form-label">已上傳圖片（點 X 可刪除）</label>
+                            <div id="old-image-preview">
+                                {% for img in post.images.all %}
+                                  <div class="image-preview-wrapper" data-img-id="{{ img.id }}">
+                                    <img src="{{ img.image.url }}" alt="貼文圖片">
+                                    <button type="button" class="delete-old-image-btn delete-label" title="刪除">
+                                      &times;
+                                    </button>
+                                    <input type="checkbox" name="delete_images" value="{{ img.id }}" class="d-none">
+                                  </div>
+                                {% empty %}
+                                  <span class="text-muted">尚未上傳圖片</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <!-- 新增圖片 -->
+                        <div class="mb-3">
+                            <label class="form-label">新增圖片（最多三張）</label>
+                            <input type="file" id="image-upload" name="images" class="form-control" accept="image/*" multiple>
+                            <div id="image-preview" class="mt-2 d-flex flex-wrap"></div>
+                        </div>
+                        <!-- 地點選擇區域（可收合） -->
+                        <button class="btn btn-link p-0 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#locationCollapse">
+                            <i class="fas fa-map-marker-alt me-1"></i>標記餐廳地點（選填）
+                        </button>
+                        <div class="collapse" id="locationCollapse">
+                            <div class="location-section">
+                                <h5><i class="fas fa-map-marker-alt me-2"></i>餐廳地點 (選填)</h5>
+                                <div class="mb-3">
+                                    <label for="location-search" class="form-label">搜尋餐廳</label>
+                                    <input id="location-search" type="text" class="form-control" placeholder="輸入餐廳名稱進行搜尋">
+                                    <div class="form-text text-muted">
+                                        搜尋並選擇您想要標記的餐廳位置
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div id="map"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.location_name.id_for_label }}" class="form-label">餐廳名稱</label>
+                                    {{ form.location_name }}
+                                    <div class="form-text text-muted">
+                                        在地圖上選擇餐廳後，此欄位將自動填入
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.location_address.id_for_label }}" class="form-label">餐廳地址</label>
+                                    {{ form.location_address }}
+                                </div>
+                                <!-- 隱藏欄位 -->
+                                {{ form.location_lat }}
+                                {{ form.location_lng }}
+                                {{ form.location_place_id }}
+                            </div>
+                        </div>
+                        <!-- 發布按鈕 -->
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">更新貼文</button>
+                            <a href="{% url 'post:post_history' %}" class="btn btn-outline-secondary">取消</a>
+                        </div>
+                    </form>
+                    {% if messages %}
+                      <ul class="messages mt-3">
+                        {% for message in messages %}
+                          <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/post_common.js' %}"></script>
+<!-- Google Maps API & 相關 JS 可複用 create_post.html -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=initMap" async defer></script>
+<script src="{% static 'js/post_map.js' %}"></script>
+{% endblock %}

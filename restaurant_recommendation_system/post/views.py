@@ -53,8 +53,16 @@ def edit_post(request, post_id):
         return redirect('post:post_history')
     if request.method == 'POST':
         form = PostCreateForm(request.POST, request.FILES, instance=post)
+        delete_image_ids = request.POST.getlist('delete_images')
         if form.is_valid():
             form.save()
+            # 刪除舊圖片
+            if delete_image_ids:
+                PostImage.objects.filter(id__in=delete_image_ids, post=post).delete()
+            # 新增新圖片（這段很重要！）
+            images = request.FILES.getlist('images')
+            for img in images[:3]:
+                PostImage.objects.create(post=post, image=img)
             messages.success(request, '貼文已成功更新！')
             return redirect('post:view_post', post_id=post.id)
         else:
@@ -64,10 +72,9 @@ def edit_post(request, post_id):
     context = {
         'form': form,
         'post': post,
-        'google_api_key': settings.GOOGLE_PLACES_API_KEY,
-        'is_edit': True
+        'google_api_key': settings.GOOGLE_PLACES_API_KEY
     }
-    return render(request, 'post/create_post.html', context)
+    return render(request, 'post/edit_post.html', context)
 
 # 用戶切換貼文置頂狀態
 @login_required
