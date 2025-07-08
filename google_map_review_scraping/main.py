@@ -81,7 +81,6 @@ def main():
         driver = initialize_driver()
         try:
             for store in all_stores:
-                logging.info(f"處理店家: {store.get('店名')} (編號: {store.get('編號')})")
                 if store.get("是否已完成") == "已完成":
                     continue
                 url = store.get("店家google map網址")
