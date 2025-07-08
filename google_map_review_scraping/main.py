@@ -39,17 +39,17 @@ def merge_store_data(new_stores, store_json="store_intros.json"):
     return existing_stores
 
 def main():
-    keywords = "火鍋"  # 你可以根據需求修改
+    keywords = "燒烤店"  # 你可以根據需求修改
     town_json_path = "town.json"
-    api_key = "YOUR_KEY" # 替換為你的 Google Place API 金鑰
+    api_key = "your_key"
     store_json = "store_intros.json"
     
     # 第一步：呼叫 Google Place API 取得店家資訊
     with open(town_json_path, "r", encoding='utf-8') as f:
         towns = json.load(f)
 
-    # 篩選基隆市的前六筆鄉鎮區
-    target_towns = [t for t in towns if t["CountyName"] == "基隆市"][1:2]
+    # 篩選基隆市的前七筆鄉鎮區
+    target_towns = [t for t in towns if t["CountyName"] == "基隆市"][0:7]
 
     for town in target_towns:
         lat = town["latitude"]
@@ -61,12 +61,12 @@ def main():
             town_json_path=None,
             keywords=keywords,
             api_key=api_key,
-            radius=1500,
+            radius=2000,
             output_json=temp_output_json,
             lat=lat,
             lng=lng
         )
-        
+        logging.info(f"完成抓取 {town['TownName']} 的店家資訊，存於 {temp_output_json}")
         # 2. 將新店家資訊合併到store_intros.json
         with open(temp_output_json, 'r', encoding='utf-8') as f:
             new_stores = json.load(f)
@@ -81,6 +81,7 @@ def main():
         driver = initialize_driver()
         try:
             for store in all_stores:
+                logging.info(f"處理店家: {store.get('店名')} (編號: {store.get('編號')})")
                 if store.get("是否已完成") == "已完成":
                     continue
                 url = store.get("店家google map網址")

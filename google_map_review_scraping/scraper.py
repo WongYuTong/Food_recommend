@@ -19,7 +19,7 @@ def open_url(driver, url):
     except TimeoutException:
         logging.error("打開URL時超時，請檢查網絡連接或URL是否正確。")
 
-def scroll_reviews(driver, store_name, pause_time=3, max_no_change_attempts=5, batch_size=50, max_scrolls=10000, store_id=None):
+def scroll_reviews(driver, store_name, pause_time=3, max_no_change_attempts=2, batch_size=50, max_scrolls=10000, store_id=None):
     """
     持續滾動評論區直到沒有新評論，並以 all_reviews.json 為依據計算數量
     """
@@ -47,13 +47,13 @@ def scroll_reviews(driver, store_name, pause_time=3, max_no_change_attempts=5, b
                         if len(row) > 4 and row[4] and row[4] != "無評論":
                             review_with_text_count += 1
 
-        if review_with_text_count >= 35:
-            logging.info(f"店家 {store_name}（編號：{store_id}）已達到35則有效評論上限，跳過抓取")
-            update_completion_status(store_id, "已完成", f"已達到35則有效評論上限")
+        if review_with_text_count >= 100:
+            logging.info(f"店家 {store_name}（編號：{store_id}）已達到100則有效評論上限，跳過抓取")
+            update_completion_status(store_id, "已完成", f"已達到100則有效評論上限")
             return
-        if review_count >= 70:
-            logging.info(f"店家 {store_name}（編號：{store_id}）已達到70則評論上限，跳過抓取")
-            update_completion_status(store_id, "已完成", f"已達到70則評論上限")
+        if review_count >= 150:
+            logging.info(f"店家 {store_name}（編號：{store_id}）已達到150則評論上限，跳過抓取")
+            update_completion_status(store_id, "已完成", f"已達到150則評論上限")
             return
 
         scrollable_div = WebDriverWait(driver, 60).until(
@@ -72,21 +72,21 @@ def scroll_reviews(driver, store_name, pause_time=3, max_no_change_attempts=5, b
             logging.info(f"第 {scroll_count} 次滾動，已加載 {len(reviews)} 條評論。")
             new_reviews = [review for review in reviews if review not in processed_reviews]
             if new_reviews:
-                remaining_reviews = min(30 - review_with_text_count, 70 - review_count)
+                remaining_reviews = min(100 - review_with_text_count, 150 - review_count)
                 if remaining_reviews <= 0:
                     logging.info(f"店家 {store_name}（編號：{store_id}）已達到評論上限")
-                    if review_with_text_count >= 30:
-                        update_completion_status(store_id, "已完成", f"已達到30則有效評論上限")
+                    if review_with_text_count >= 100:
+                        update_completion_status(store_id, "已完成", f"已達到100則有效評論上限")
                     else:
-                        update_completion_status(store_id, "已完成", f"已達到70則評論上限")
+                        update_completion_status(store_id, "已完成", f"已達到150則評論上限")
                     break
-                reviews_to_process = min(len(new_reviews[:batch_size]), max(30, remaining_reviews * 2))
+                reviews_to_process = min(len(new_reviews[:batch_size]), max(100, remaining_reviews * 2))
                 new_text_reviews = fetch_reviews(driver, store_name, new_reviews[:reviews_to_process], store_id)
                 processed_reviews.update(new_reviews[:reviews_to_process])
                 review_with_text_count += new_text_reviews
-                if review_with_text_count >= 30:
-                    logging.info(f"店家 {store_name}（編號：{store_id}）已達到30則有效評論上限")
-                    update_completion_status(store_id, "已完成", f"已達到30則有效評論上限")
+                if review_with_text_count >= 100:
+                    logging.info(f"店家 {store_name}（編號：{store_id}）已達到100則有效評論上限")
+                    update_completion_status(store_id, "已完成", f"已達到100則有效評論上限")
                     break
             if new_height == last_height:
                 no_change_attempts += 1
@@ -220,7 +220,6 @@ def fetch_reviews(driver, store_name, reviews, store_id=None):
     """
     try:
         all_reviews_file = "all_reviews.json"
-        current_date = time.strftime("%Y-%m-%d")
         new_text_reviews_count = 0  # 追蹤新增的有效評論數量
 
         # 讀取已存在的評論
@@ -239,28 +238,6 @@ def fetch_reviews(driver, store_name, reviews, store_id=None):
             elif isinstance(review, dict):
                 existing_reviews.add((str(review.get('店家編號')), review.get('用戶名稱'), review.get('評論日期')))
 
-        # 檢查並轉換舊格式評論為新格式
-        converted_reviews = []
-        for review in all_reviews:
-            if isinstance(review, list) and len(review) >= 4:
-                # 舊格式轉換為新格式
-                converted_review = {
-                    '店家編號': review[0],
-                    '用戶名稱': review[1],
-                    '評分': review[2],
-                    '評論日期': review[3],
-                    '評論內容': review[4] if len(review) > 4 else "無評論",
-                    '類別及評分': review[5] if len(review) > 5 else "無類別及評分",
-                    '抓取日期': review[6] if len(review) > 6 else current_date,
-                    '用戶評論記錄網址': review[7] if len(review) > 7 else "無評論記錄網址"
-                }
-                converted_reviews.append(converted_review)
-            else:
-                # 已經是字典格式，直接保留
-                converted_reviews.append(review)
-        
-        # 將轉換後的評論列表替換原有列表
-        all_reviews = converted_reviews
 
         logging.info(f"共找到 {len(reviews)} 條評論：\n")
 
@@ -353,7 +330,7 @@ def fetch_reviews(driver, store_name, reviews, store_id=None):
                         '評論日期': review_date,
                         '評論內容': review_text,
                         '類別及評分': structured_review_text,
-                        '抓取日期': current_date,
+                        # '抓取日期': current_date,  # 已移除
                         '用戶評論記錄網址': user_profile_url
                     }
                     
@@ -777,7 +754,7 @@ def scroll_intro_section(driver, scrollable_div, max_scrolls=10, max_no_change_a
             new_height = driver.execute_script("return arguments[0].scrollHeight", scrollable_div)
             scroll_count += 1
 
-            logging.info(f"第 {scroll_count} 次滾動，當前高度 {new_height}")
+            logging.info(f"第 {scroll_count} 次滾动，當前高度 {new_height}")
 
             if new_height == last_height:
                 no_change_attempts += 1
@@ -788,7 +765,7 @@ def scroll_intro_section(driver, scrollable_div, max_scrolls=10, max_no_change_a
                 last_height = new_height
 
             if no_change_attempts >= max_no_change_attempts:
-                logging.info("簡介內容已完全加載，停止滾動。")
+                logging.info("簡介內容已完全加載，停止滾动。")
                 break
 
     except Exception as e:
