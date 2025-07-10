@@ -139,32 +139,53 @@
 <script>
     $(document).ready(function() {
         let postIdToDelete = null;
-        
+
         // 處理刪除按鈕點擊
         $('.delete-post-btn').click(function() {
             postIdToDelete = $(this).data('post-id');
-            // 使用Bootstrap標準模態窗口
             $('#deleteConfirmModal').modal('show');
         });
-        
+
         // 確認刪除
         $('#confirmDelete').click(function() {
             if (postIdToDelete) {
-                // 這裡應該實現AJAX刪除貼文的功能
-                // 目前僅示範UI交互
-                
-                // 隱藏確認對話框
-                $('#deleteConfirmModal').modal('hide');
-                
-                showToast('貼文已成功刪除');
-                
-                // 重新載入頁面顯示更新後的貼文列表
-                setTimeout(function() {
-                    window.location.reload();
-                }, 1500);
+                // 取得 CSRF token
+                const csrftoken = getCookie('csrftoken');
+                $.ajax({
+                    url: `/post/${postIdToDelete}/delete/`,
+                    type: 'POST',
+                    headers: {'X-CSRFToken': csrftoken},
+                    success: function(response) {
+                        $('#deleteConfirmModal').modal('hide');
+                        showToast('貼文已成功刪除');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
+                    },
+                    error: function(xhr) {
+                        $('#deleteConfirmModal').modal('hide');
+                        showToast('刪除失敗，請重試');
+                    }
+                });
             }
         });
-        
+
+        // 取得 CSRF token 的函式
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
         // 顯示通知提示
         function showToast(message) {
             $('#toastMessage').text(message);

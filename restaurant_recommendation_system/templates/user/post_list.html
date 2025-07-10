@@ -10,13 +10,13 @@
             {% endif %}
             <div class="card-body">
                 <h5 class="card-title">
-                    <a href="{% url 'post:post:view_post' post.id %}" class="text-decoration-none text-dark">
+                    <a href="{% url 'post:view_post' post.id %}" class="text-decoration-none text-dark">
                         {{ post.title }}
                     </a>
                 </h5>
                 <p class="card-text">{{ post.content|linebreaks|truncatewords:50 }}</p>
                 {% if post.content|wordcount > 50 %}
-                    <a href="{% url 'post:post:view_post' post.id %}" class="text-decoration-none">
+                    <a href="{% url 'post:view_post' post.id %}" class="text-decoration-none">
                         閱讀更多...
                     </a>
                 {% endif %}
@@ -31,7 +31,7 @@
                                 {% if post.is_favorited %}已收藏{% else %}收藏{% endif %}
                             </span>
                         </button>
-                        <a href="{% url 'post:post:view_post' post.id %}" class="btn btn-sm btn-outline-primary">
+                        <a href="{% url 'post:view_post' post.id %}" class="btn btn-sm btn-outline-primary">
                             <i class="far fa-comment me-1"></i> 查看詳情
                         </a>
                     </div>

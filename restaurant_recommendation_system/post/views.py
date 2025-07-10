@@ -76,6 +76,7 @@ def edit_post(request, post_id):
     }
     return render(request, 'post/edit_post.html', context)
 
+
 # 用戶切換貼文置頂狀態
 @login_required
 def toggle_post_pin(request, post_id):
@@ -97,18 +98,35 @@ def toggle_post_pin(request, post_id):
     messages.success(request, f'已{action}貼文')
     return redirect('post:post_history')
 
-# 管理員刪除貼文
-@staff_member_required
+# 使用者刪除自己的貼文
+@login_required
 def delete_post(request, post_id):
     post = get_object_or_404(Post, id=post_id)
+    if post.user != request.user:
+        messages.error(request, '您沒有權限刪除此貼文')
+        return redirect('post:post_history')
     if request.method == 'POST':
         post.delete()
-        messages.success(request, '貼文已被刪除')
-        return redirect(request.META.get('HTTP_REFERER', 'home'))
+        messages.success(request, '貼文已刪除')
+        return redirect('post:post_history')
     return render(request, 'user/confirm_delete.html', {
         'item_type': '貼文',
         'item': post,
-        'cancel_url': request.META.get('HTTP_REFERER', 'home')
+        'cancel_url': 'post:post_history'
+    })
+
+# 管理員刪除任意貼文
+@staff_member_required
+def admin_delete_post(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    if request.method == 'POST':
+        post.delete()
+        messages.success(request, '貼文已被管理員刪除')
+        return redirect('post:post_history')
+    return render(request, 'user/confirm_delete.html', {
+        'item_type': '貼文',
+        'item': post,
+        'cancel_url': 'post:post_history'
     })
 
 # 管理員設置推薦貼文
