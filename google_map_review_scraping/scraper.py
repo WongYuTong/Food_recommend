@@ -47,13 +47,13 @@ def scroll_reviews(driver, store_name, pause_time=3, max_no_change_attempts=2, b
                         if len(row) > 4 and row[4] and row[4] != "無評論":
                             review_with_text_count += 1
 
-        if review_with_text_count >= 100:
-            logging.info(f"店家 {store_name}（編號：{store_id}）已達到100則有效評論上限，跳過抓取")
-            update_completion_status(store_id, "已完成", f"已達到100則有效評論上限")
+        if review_with_text_count >= 50:
+            logging.info(f"店家 {store_name}（編號：{store_id}）已達到50則有效評論上限，跳過抓取")
+            update_completion_status(store_id, "已完成", f"已達到50則有效評論上限")
             return
-        if review_count >= 150:
-            logging.info(f"店家 {store_name}（編號：{store_id}）已達到150則評論上限，跳過抓取")
-            update_completion_status(store_id, "已完成", f"已達到150則評論上限")
+        if review_count >= 70:
+            logging.info(f"店家 {store_name}（編號：{store_id}）已達到70則評論上限，跳過抓取")
+            update_completion_status(store_id, "已完成", f"已達到70則評論上限")
             return
 
         scrollable_div = WebDriverWait(driver, 60).until(
@@ -72,21 +72,21 @@ def scroll_reviews(driver, store_name, pause_time=3, max_no_change_attempts=2, b
             logging.info(f"第 {scroll_count} 次滾動，已加載 {len(reviews)} 條評論。")
             new_reviews = [review for review in reviews if review not in processed_reviews]
             if new_reviews:
-                remaining_reviews = min(100 - review_with_text_count, 150 - review_count)
+                remaining_reviews = min(50 - review_with_text_count, 70 - review_count)
                 if remaining_reviews <= 0:
                     logging.info(f"店家 {store_name}（編號：{store_id}）已達到評論上限")
-                    if review_with_text_count >= 100:
-                        update_completion_status(store_id, "已完成", f"已達到100則有效評論上限")
+                    if review_with_text_count >= 50:
+                        update_completion_status(store_id, "已完成", f"已達到50則有效評論上限")
                     else:
-                        update_completion_status(store_id, "已完成", f"已達到150則評論上限")
+                        update_completion_status(store_id, "已完成", f"已達到70則評論上限")
                     break
-                reviews_to_process = min(len(new_reviews[:batch_size]), max(100, remaining_reviews * 2))
+                reviews_to_process = min(len(new_reviews[:batch_size]), max(50, remaining_reviews * 2))
                 new_text_reviews = fetch_reviews(driver, store_name, new_reviews[:reviews_to_process], store_id)
                 processed_reviews.update(new_reviews[:reviews_to_process])
                 review_with_text_count += new_text_reviews
-                if review_with_text_count >= 100:
-                    logging.info(f"店家 {store_name}（編號：{store_id}）已達到100則有效評論上限")
-                    update_completion_status(store_id, "已完成", f"已達到100則有效評論上限")
+                if review_with_text_count >= 50:
+                    logging.info(f"店家 {store_name}（編號：{store_id}）已達到50則有效評論上限")
+                    update_completion_status(store_id, "已完成", f"已達到50則有效評論上限")
                     break
             if new_height == last_height:
                 no_change_attempts += 1
