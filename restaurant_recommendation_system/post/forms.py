@@ -111,7 +111,17 @@ class PostCreateForm(forms.ModelForm):
             self.fields['restaurant_type'].choices = [('', '請選擇細項')] + [(s, s) for s in sub_choices]
         else:
             self.fields['restaurant_type'].choices = [('', '請先選擇餐廳主類型')]
-
+        # 初始化細項分類選單的值
+        if 'restaurant_type' in self.fields and self.instance and self.instance.pk:
+            self.fields['restaurant_type'].widget.attrs['data-current-value'] = self.instance.restaurant_type or ''
+        # 如果 instance 有 restaurant_type 但 primary_category 沒有，反推主類型
+        if self.instance and self.instance.pk and not getattr(self.instance, 'primary_category', None):
+            rest_type = getattr(self.instance, 'restaurant_type', None)
+            if rest_type:
+                for cat, sublist in SUBCATEGORY_MAP.items():
+                    if rest_type in sublist:
+                        self.initial['primary_category'] = cat
+                        break
 class CommentForm(forms.ModelForm):
     """評論表單"""
     content = forms.CharField(
