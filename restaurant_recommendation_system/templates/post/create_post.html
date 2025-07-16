@@ -63,6 +63,18 @@
                                 {{ form.location_place_id }}
                             </div>
                         </div>
+                        <!-- 主類型選單 -->
+                        <div class="mb-3 d-flex align-items-center">
+                            <label for="id_primary_category" class="form-label me-2 mb-0" style="white-space:nowrap;">餐廳類型</label>
+                            {{ form.primary_category }}
+                            <span class="mx-2">-</span>
+                            {{ form.restaurant_type }}
+                        </div>
+                        <!-- 用餐時段 -->
+                        <div class="mb-3">
+                            <label for="id_meal_time" class="form-label">用餐時段</label>
+                            {{ form.meal_time }}
+                        </div>
                         <!-- 發布按鈕 -->
                         <div class="d-grid gap-2 mt-4">
                             <button type="submit" class="btn btn-primary btn-lg">發布貼文</button>
@@ -96,5 +108,24 @@
 <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=initMap" async defer></script>
 <script src="{% static 'js/post_map.js' %}"></script>
 <script src="{% static 'js/post_common.js' %}"></script>
+<script id="subcategory-map-data" type="application/json">{{ SUBCATEGORY_MAP|safe }}</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const subcategoryMap = JSON.parse(document.getElementById('subcategory-map-data').textContent);
+    const primarySelect = document.getElementById('id_primary_category');
+    const subSelect = document.getElementById('id_restaurant_type');
+    if (primarySelect && subSelect) {
+        primarySelect.addEventListener('change', function() {
+            console.log('主類型選擇變更:', this.value);
+            updateSubcategoryOptions(this.value, subcategoryMap);
+        });
+        // 頁面載入時初始化細項
+        console.log('頁面載入，主類型預設值:', primarySelect.value);
+        updateSubcategoryOptions(primarySelect.value, subcategoryMap);
+    } else {
+        console.log('找不到主類型或細項下拉選單');
+    }
+});
+</script>
 {% endblock %}
 
