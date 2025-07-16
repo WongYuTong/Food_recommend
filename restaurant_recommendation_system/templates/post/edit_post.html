@@ -75,11 +75,13 @@
                             </div>
                         </div>
                         <!-- 主類型選單 -->
-                        <div class="mb-3 d-flex align-items-center">
-                            <label for="id_primary_category" class="form-label me-2 mb-0" style="white-space:nowrap;">餐廳類型</label>
-                            {{ form.primary_category }}
-                            <span class="mx-2">-</span>
-                            {{ form.restaurant_type }}
+                        <div class="mb-3">
+                            <label for="id_primary_category" class="form-label mb-1" style="white-space:nowrap;">餐廳類型</label>
+                            <div class="restaurant-type-row">
+                                {{ form.primary_category }}
+                                <span class="mx-2">-</span>
+                                {{ form.restaurant_type }}
+                            </div>
                         </div>
                         <!-- 用餐時段 -->
                         <div class="mb-3">

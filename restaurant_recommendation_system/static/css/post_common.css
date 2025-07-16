@@ -24,6 +24,9 @@
 
 /* 美化下拉式選單 */
 select.form-control, select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     border: 1px solid #e9ecef;
     border-radius: 6px;
     padding: 8px 36px 8px 12px;
@@ -46,4 +49,25 @@ select[disabled], select:disabled {
     background-color: #f8f9fa;
     color: #adb5bd;
     cursor: not-allowed;
+}
+
+/* RWD: 讓 select 在小螢幕自動滿版 */
+select.form-control, select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* 讓主類型與細項下拉選單在同一行自動分配寬度 */
+.restaurant-type-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.restaurant-type-row select {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
 }
