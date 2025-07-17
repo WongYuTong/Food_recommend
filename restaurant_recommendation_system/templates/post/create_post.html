@@ -21,17 +21,31 @@
                         </div>
                         <!-- 標題 -->
                         <input type="text" name="title" class="form-control form-control-lg mb-3" placeholder="貼文標題（必填）" value="{{ form.title.value|default_if_none:'' }}">
-                        <!-- 內容 -->
-                        <textarea name="content" class="form-control mb-3" rows="5" placeholder="分享您的美食體驗...">{{ form.content.value|default_if_none:'' }}</textarea>
-                        <!-- 圖片上傳與預覽 -->
+                        <!-- 餐廳類型 -->
+                        <div class="mb-3">
+                            <label for="id_primary_category" class="form-label mb-1" style="white-space:nowrap;">餐廳類型</label>
+                            <div class="restaurant-type-row">
+                                {{ form.primary_category }}
+                                <span class="mx-2">-</span>
+                                {{ form.restaurant_type }}
+                            </div>
+                        </div>
+                        <!-- 用餐時段 -->
+                        <div class="mb-3">
+                            <label for="id_meal_time" class="form-label">用餐時段</label>
+                            {{ form.meal_time }}
+                        </div>
+                        <!-- 貼文內容 -->
+                        <textarea name="content" class="form-control mb-3" rows="5" placeholder="分享您的用餐體驗...">{{ form.content.value|default_if_none:'' }}</textarea>
+                        <!-- 圖片上傳 -->
                         <div class="mb-3">
                             <label class="form-label">圖片（最多三張）</label>
                             <input type="file" id="image-upload" name="images" class="form-control" accept="image/*" multiple>
                             <div id="image-preview" class="mt-2 d-flex flex-wrap"></div>
                         </div>
-                        <!-- 地點選擇區域（可收合） -->
+                        <!-- 地點標記（可收合） -->
                         <button class="btn btn-link p-0 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#locationCollapse">
-                            <i class="fas fa-map-marker-alt me-1"></i>標記餐廳地點（選填）
+                            <i class="fas fa-map-marker-alt me-1"></i>標記餐廳地點
                         </button>
                         <div class="collapse" id="locationCollapse">
                             <div class="location-section">
@@ -62,20 +76,6 @@
                                 {{ form.location_lng }}
                                 {{ form.location_place_id }}
                             </div>
-                        </div>
-                        <!-- 主類型選單 -->
-                        <div class="mb-3">
-                            <label for="id_primary_category" class="form-label mb-1" style="white-space:nowrap;">餐廳類型</label>
-                            <div class="restaurant-type-row">
-                                {{ form.primary_category }}
-                                <span class="mx-2">-</span>
-                                {{ form.restaurant_type }}
-                            </div>
-                        </div>
-                        <!-- 用餐時段 -->
-                        <div class="mb-3">
-                            <label for="id_meal_time" class="form-label">用餐時段</label>
-                            {{ form.meal_time }}
                         </div>
                         <!-- 發布按鈕 -->
                         <div class="d-grid gap-2 mt-4">

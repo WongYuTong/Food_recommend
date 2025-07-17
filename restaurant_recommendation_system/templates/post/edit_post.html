@@ -15,6 +15,20 @@
                         {% csrf_token %}
                         <!-- 標題 -->
                         <input type="text" name="title" class="form-control form-control-lg mb-3" placeholder="貼文標題（必填）" value="{{ form.title.value|default_if_none:'' }}">
+                        <!-- 餐廳類型 -->
+                        <div class="mb-3">
+                            <label for="id_primary_category" class="form-label mb-1" style="white-space:nowrap;">餐廳類型</label>
+                            <div class="restaurant-type-row">
+                                {{ form.primary_category }}
+                                <span class="mx-2">-</span>
+                                {{ form.restaurant_type }}
+                            </div>
+                        </div>
+                        <!-- 用餐時段 -->
+                        <div class="mb-3">
+                            <label for="id_meal_time" class="form-label">用餐時段</label>
+                            {{ form.meal_time }}
+                        </div>
                         <!-- 內容 -->
                         <textarea name="content" class="form-control mb-3" rows="5" placeholder="分享您的美食體驗...">{{ form.content.value|default_if_none:'' }}</textarea>
                         <!-- 舊圖片區塊 -->
@@ -41,15 +55,16 @@
                             <div id="image-preview" class="mt-2 d-flex flex-wrap"></div>
                         </div>
                         <!-- 地點選擇區域（可收合） -->
-                        <button class="btn btn-link p-0 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#locationCollapse">
+                        <button class="btn btn-link p-0 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#locationCollapse" aria-expanded="true">
                             <i class="fas fa-map-marker-alt me-1"></i>標記餐廳地點（選填）
                         </button>
-                        <div class="collapse" id="locationCollapse">
+                        <div class="collapse show" id="locationCollapse">
                             <div class="location-section">
                                 <h5><i class="fas fa-map-marker-alt me-2"></i>餐廳地點 (選填)</h5>
                                 <div class="mb-3">
                                     <label for="location-search" class="form-label">搜尋餐廳</label>
-                                    <input id="location-search" type="text" class="form-control" placeholder="輸入餐廳名稱進行搜尋">
+                                    <input id="location-search" type="text" class="form-control" placeholder="輸入餐廳名稱進行搜尋"
+                                           value="{{ form.location_name.value|default_if_none:'' }}">
                                     <div class="form-text text-muted">
                                         搜尋並選擇您想要標記的餐廳位置
                                     </div>
@@ -73,20 +88,6 @@
                                 {{ form.location_lng }}
                                 {{ form.location_place_id }}
                             </div>
-                        </div>
-                        <!-- 主類型選單 -->
-                        <div class="mb-3">
-                            <label for="id_primary_category" class="form-label mb-1" style="white-space:nowrap;">餐廳類型</label>
-                            <div class="restaurant-type-row">
-                                {{ form.primary_category }}
-                                <span class="mx-2">-</span>
-                                {{ form.restaurant_type }}
-                            </div>
-                        </div>
-                        <!-- 用餐時段 -->
-                        <div class="mb-3">
-                            <label for="id_meal_time" class="form-label">用餐時段</label>
-                            {{ form.meal_time }}
                         </div>
                         <!-- 發布按鈕 -->
                         <div class="d-grid gap-2 mt-4">
@@ -124,14 +125,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const subSelect = document.getElementById('id_restaurant_type');
     if (primarySelect && subSelect) {
         primarySelect.addEventListener('change', function() {
-            console.log('主類型選擇變更:', this.value);
             updateSubcategoryOptions(this.value, subcategoryMap);
         });
         // 頁面載入時初始化細項
-        console.log('頁面載入，主類型預設值:', primarySelect.value);
         updateSubcategoryOptions(primarySelect.value, subcategoryMap);
-    } else {
-        console.log('找不到主類型或細項下拉選單');
+    }
+    // 地點欄位自動帶入搜尋欄
+    const locationNameInput = document.getElementById('id_location_name');
+    const locationSearchInput = document.getElementById('location-search');
+    if (locationNameInput && locationSearchInput && locationNameInput.value) {
+        locationSearchInput.value = locationNameInput.value;
     }
 });
 </script>
