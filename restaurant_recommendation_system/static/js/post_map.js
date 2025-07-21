@@ -22,20 +22,19 @@ function initMap() {
         map.setCenter(place.geometry.location);
         map.setZoom(17);
         if (marker) {
-            marker.setPosition(place.geometry.location);
+            marker.position = place.geometry.location;
         } else {
-            marker = new google.maps.Marker({
-                position: place.geometry.location,
+            marker = new google.maps.marker.AdvancedMarkerElement({
                 map: map,
-                title: place.name,
-                animation: google.maps.Animation.DROP
+                position: place.geometry.location,
+                title: place.name
             });
         }
-        document.getElementById("location-name").value = place.name;
-        document.getElementById("location-address").value = place.formatted_address;
-        document.getElementById("location-lat").value = place.geometry.location.lat();
-        document.getElementById("location-lng").value = place.geometry.location.lng();
-        document.getElementById("location-place-id").value = place.place_id;
+        document.getElementById("id_location_name").value = place.name;
+        document.getElementById("id_location_address").value = place.formatted_address;
+        document.getElementById("id_location_lat").value = place.geometry.location.lat();
+        document.getElementById("id_location_lng").value = place.geometry.location.lng();
+        document.getElementById("id_location_place_id").value = place.place_id;
     });
     map.addListener("click", (mapsMouseEvent) => {
         const clickLocation = mapsMouseEvent.latLng;
@@ -48,16 +47,24 @@ function initMap() {
             }
         });
     });
-    const savedLat = document.getElementById("location-lat").value;
-    const savedLng = document.getElementById("location-lng").value;
-    if (savedLat && savedLng) {
-        const savedLocation = { lat: parseFloat(savedLat), lng: parseFloat(savedLng) };
-        map.setCenter(savedLocation);
-        map.setZoom(17);
-        marker = new google.maps.Marker({
-            position: savedLocation,
+    const latInput = document.getElementById('id_location_lat');
+    const lngInput = document.getElementById('id_location_lng');
+    const nameInput = document.getElementById('id_location_name');
+    const addressInput = document.getElementById('id_location_address');
+    const placeIdInput = document.getElementById('id_location_place_id');
+
+    // 如果有已儲存的地點，初始化地圖標記
+    if (latInput && lngInput && latInput.value && lngInput.value) {
+        const position = {
+            lat: parseFloat(latInput.value),
+            lng: parseFloat(lngInput.value)
+        };
+        map.setCenter(position);
+        map.setZoom(16);
+        marker = new google.maps.marker.AdvancedMarkerElement({
             map: map,
-            title: document.getElementById("location-name").value
+            position: position,
+            title: nameInput && nameInput.value ? nameInput.value : ""
         });
     }
 }
@@ -69,19 +76,19 @@ function placeDetails(placeId) {
         (place, status) => {
             if (status === google.maps.places.PlacesServiceStatus.OK) {
                 if (marker) {
-                    marker.setPosition(place.geometry.location);
+                    marker.position = place.geometry.location;
                 } else {
-                    marker = new google.maps.Marker({
-                        position: place.geometry.location,
+                    marker = new google.maps.marker.AdvancedMarkerElement({
                         map: map,
+                        position: place.geometry.location,
                         title: place.name
                     });
                 }
-                document.getElementById("location-name").value = place.name;
-                document.getElementById("location-address").value = place.formatted_address;
-                document.getElementById("location-lat").value = place.geometry.location.lat();
-                document.getElementById("location-lng").value = place.geometry.location.lng();
-                document.getElementById("location-place-id").value = place.place_id;
+                document.getElementById("id_location_name").value = place.name;
+                document.getElementById("id_location_address").value = place.formatted_address;
+                document.getElementById("id_location_lat").value = place.geometry.location.lat();
+                document.getElementById("id_location_lng").value = place.geometry.location.lng();
+                document.getElementById("id_location_place_id").value = place.place_id;
                 document.getElementById("location-search").value = place.name;
             }
         }
