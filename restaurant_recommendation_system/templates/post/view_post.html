@@ -107,9 +107,21 @@
                     {% if post.images.all %}
                         <div class="post-image-row mb-3">
                             {% for img in post.images.all %}
-                                <img src="{{ img.image.url }}" class="post-detail-img me-2 mb-2" alt="{{ post.title }}">
+                                <img src="{{ img.image.url }}" class="post-detail-img me-2 mb-2"
+                                    alt="{{ post.title }}"
+                                    style="cursor: pointer; max-width: 120px; max-height: 120px; object-fit: cover;"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#imageModal"
+                                    data-img-url="{{ img.image.url }}">
                             {% endfor %}
                         </div>
+                    {% elif post.image %}
+                        <img src="{{ post.image.url }}" class="post-detail-img mb-2"
+                            alt="{{ post.title }}"
+                            style="cursor: pointer; max-width: 220px; max-height: 220px; object-fit: cover;"
+                            data-bs-toggle="modal"
+                            data-bs-target="#imageModal"
+                            data-img-url="{{ post.image.url }}">
                     {% endif %}
                     <!-- 餐廳位置信息 -->
                     {% if post.location_name %}
@@ -391,6 +403,15 @@
             </div>
         </div>
     </div>
+</div>
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="background: transparent; border: none;">
+      <div class="modal-body p-0" style="background: transparent;">
+        <img id="modalImage" src="" alt="放大圖片" style="max-height:80vh; max-width:100vw; object-fit:contain; margin:auto; display:block; background:#222;">
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
