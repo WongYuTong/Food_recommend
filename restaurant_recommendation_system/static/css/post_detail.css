@@ -131,9 +131,59 @@
 
 .card.shadow.mb-4.other-posts-card {
     position: static !important;
+    
     z-index: auto !important;
 }
 
 .dropdown-menu.reaction-menu {
     z-index: 9999 !important;
+}
+
+/* 餐廳分類與時段 badge 區塊 */
+.post-meta-badges {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.post-meta-badges .badge {
+    font-size: 1rem;
+    padding: 0.5em 1em;
+    border-radius: 1em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+}
+.post-meta-badge-large {
+    font-size: 1.15rem;
+    padding: 0.6em 1.3em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+@media (max-width: 576px) {
+    .post-meta-badges {
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+/* 統一貼文圖片大小與排列 */
+.post-image-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.post-detail-img {
+    width: 180px;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 12px;
+    max-width: 100%;
+    display: block;
+}
+@media (max-width: 576px) {
+    .post-detail-img {
+        width: 100px;
+        height: 100px;
+    }
 }

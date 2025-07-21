@@ -81,20 +81,36 @@
                     {% endif %}
                 </div>
                 
-                <!-- 貼文圖片 -->
-                {% if post.images.all %}
-                    <div class="d-flex flex-wrap mb-3">
-                        {% for img in post.images.all %}
-                            <img src="{{ img.image.url }}" class="card-img-top me-2 mb-2" alt="{{ post.title }}" style="max-height: 220px; max-width: 220px; object-fit: cover; border-radius: 12px;">
-                        {% endfor %}
-                    </div>
-                {% endif %}
-                
-                <!-- 貼文內容 -->
+                <!-- 貼文內容（標題、分類、內文） -->
                 <div class="card-body">
-                    <h3 class="card-title mb-3">{{ post.title }}</h3>
+                    <h3 class="card-title mb-2">{{ post.title }}</h3>
                     <div class="card-text mb-4">{{ post.content|linebreaks }}</div>
-                    
+                    <!-- 分類 badge 區塊移到這裡 -->
+                    <div class="post-meta-badges mt-3 mb-4">
+                        {% if post.primary_category %}
+                            <span class="badge bg-info text-dark post-meta-badge-large">
+                                <i class="fas fa-utensils me-1"></i>{{ post.primary_category }}
+                            </span>
+                        {% endif %}
+                        {% if post.restaurant_type %}
+                            <span class="badge bg-secondary post-meta-badge-large">
+                                {{ post.restaurant_type }}
+                            </span>
+                        {% endif %}
+                        {% if post.meal_time %}
+                            <span class="badge bg-success post-meta-badge-large">
+                                <i class="fas fa-clock me-1"></i>{{ post.get_meal_time_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <!-- 圖片區塊 -->
+                    {% if post.images.all %}
+                        <div class="post-image-row mb-3">
+                            {% for img in post.images.all %}
+                                <img src="{{ img.image.url }}" class="post-detail-img me-2 mb-2" alt="{{ post.title }}">
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                     <!-- 餐廳位置信息 -->
                     {% if post.location_name %}
                     <div class="location-box">
