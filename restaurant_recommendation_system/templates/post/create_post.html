@@ -35,6 +35,11 @@
                             <label for="id_meal_time" class="form-label">用餐時段</label>
                             {{ form.meal_time }}
                         </div>
+                        <!-- 用餐日期 -->
+                        <div class="mb-3">
+                            <label for="{{ form.dining_date.id_for_label }}" class="form-label">用餐日期</label>
+                            {{ form.dining_date }}
+                        </div>
                         <!-- 貼文內容 -->
                         <textarea name="content" class="form-control mb-3" rows="5" placeholder="分享您的用餐體驗...">{{ form.content.value|default_if_none:'' }}</textarea>
                         <!-- 圖片上傳 -->
