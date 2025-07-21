@@ -104,25 +104,25 @@
                         {% endif %}
                     </div>
                     <!-- 圖片區塊 -->
-                    {% if post.images.all %}
-                        <div class="post-image-row mb-3">
-                            {% for img in post.images.all %}
-                                <img src="{{ img.image.url }}" class="post-detail-img me-2 mb-2"
-                                    alt="{{ post.title }}"
-                                    style="cursor: pointer; max-width: 120px; max-height: 120px; object-fit: cover;"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#imageModal"
-                                    data-img-url="{{ img.image.url }}">
-                            {% endfor %}
-                        </div>
-                    {% elif post.image %}
-                        <img src="{{ post.image.url }}" class="post-detail-img mb-2"
-                            alt="{{ post.title }}"
-                            style="cursor: pointer; max-width: 220px; max-height: 220px; object-fit: cover;"
-                            data-bs-toggle="modal"
-                            data-bs-target="#imageModal"
-                            data-img-url="{{ post.image.url }}">
-                    {% endif %}
+                    {% if post.images.count > 0 %}
+                    <div class="post-image-row mb-3">
+                        {% for img in post.images.all %}
+                            <img src="{{ img.image.url }}" class="post-detail-img me-2 mb-2"
+                                alt="{{ post.title }}"
+                                style="cursor: pointer; max-width: 120px; max-height: 120px; object-fit: cover;"
+                                data-bs-toggle="modal"
+                                data-bs-target="#imageModal"
+                                data-img-index="{{ forloop.counter0 }}">
+                        {% endfor %}
+                    </div>
+                {% elif post.image %}
+                    <img src="{{ post.image.url }}" class="post-detail-img mb-2"
+                        alt="{{ post.title }}"
+                        style="cursor: pointer; max-width: 220px; max-height: 220px; object-fit: cover;"
+                        data-bs-toggle="modal"
+                        data-bs-target="#imageModal"
+                        data-img-index="0">
+                {% endif %}
                     <!-- 餐廳位置信息 -->
                     {% if post.location_name %}
                     <div class="location-box">
@@ -408,7 +408,35 @@
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content" style="background: transparent; border: none;">
       <div class="modal-body p-0" style="background: transparent;">
-        <img id="modalImage" src="" alt="放大圖片" style="max-height:80vh; max-width:100vw; object-fit:contain; margin:auto; display:block; background:#222;">
+        <div id="imageCarousel" class="carousel slide" data-bs-ride="false">
+          <div class="carousel-inner">
+            {% if post.images.count > 0 %}
+              {% for img in post.images.all %}
+                <div class="carousel-item{% if forloop.first %} active{% endif %}">
+                  <img src="{{ img.image.url }}" class="d-block"
+                       alt="貼文圖片"
+                       style="max-height:80vh; max-width:100vw; object-fit:contain; margin:auto; background:#222;">
+                </div>
+              {% endfor %}
+            {% elif post.image %}
+              <div class="carousel-item active">
+                <img src="{{ post.image.url }}" class="d-block"
+                     alt="貼文圖片"
+                     style="max-height:80vh; max-width:100vw; object-fit:contain; margin:auto; background:#222;">
+              </div>
+            {% endif %}
+          </div>
+          {% if post.images.count > 1 %}
+            <button class="carousel-control-prev" type="button" data-bs-target="#imageCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">上一張</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#imageCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">下一張</span>
+            </button>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
