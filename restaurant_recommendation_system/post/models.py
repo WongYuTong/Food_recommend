@@ -15,6 +15,8 @@ class Post(models.Model):
     location_lng = models.FloatField(null=True, blank=True, help_text="地點經度")
     location_place_id = models.CharField(max_length=300, blank=True, null=True, help_text="Google Places ID")
     restaurant_type = models.CharField(max_length=100, blank=True, null=True, help_text="餐廳類型（如中式、日式、咖啡廳等）")
+    dining_date = models.DateField(null=True, blank=True, help_text="用餐日期")
+
     MEAL_TIME_CHOICES = [
         ('breakfast', '早餐'),
         ('lunch', '午餐'),
