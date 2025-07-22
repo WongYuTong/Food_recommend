@@ -10,10 +10,15 @@ def get_current_context_info():
         meal_time = "早餐"
     elif 11 <= current_hour < 14:
         meal_time = "午餐"
+    elif 14 <= current_hour < 17:
+        meal_time = "下午茶"
     elif 17 <= current_hour < 21:
         meal_time = "晚餐"
+    elif 21 <= current_hour < 24:
+        meal_time = "宵夜"
     else:
-        meal_time = "宵夜或其他時段"
+        # 凌晨0點到6點
+        meal_time = "深夜"
 
     # 平日 / 週末
     day_type = "週末" if weekday >= 5 else "平日"
