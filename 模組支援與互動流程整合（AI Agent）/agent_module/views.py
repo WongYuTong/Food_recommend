@@ -10,15 +10,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 
-
-# 功能 1：反向推薦條件擷取（優化版）
+# 功能 1：反向推薦條件擷取（強化版）
 class ExtractNegativeConditionsView(APIView):
-    permission_classes = [AllowAny]  # ✅ 測試期間開放所有人使用
+    permission_classes = [AllowAny]
 
     def post(self, request):
         user_input = request.data.get('text', '')
 
-        # 支援多個句尾標點
         negative_patterns = [
             r'不想吃(.+?)(?:[，。!！,\.]|$)',
             r'不想要(.+?)(?:[，。!！,\.]|$)',
@@ -31,11 +29,18 @@ class ExtractNegativeConditionsView(APIView):
         for pattern in negative_patterns:
             matches = re.findall(pattern, user_input)
             for match in matches:
-                # 將 "和"、"跟"、"或"、"以及"、"、" 等連接詞切開
-                split_items = re.split(r'[、和跟以及或]', match)
+                # 這裡是加強版：能抓「甜點、義大利麵」中兩個詞
+                split_items = re.split(r'[,、，和跟以及或還有\s]+', match)
                 excluded_items.extend([item.strip() for item in split_items if item.strip()])
 
-        return Response({'excluded': excluded_items})
+        # 去除重複與空白
+        unique_excluded = list(set(excluded_items))
+
+        # ✅ 可選：只保留已知分類（未來接資料庫可開啟）
+        # known_categories = {"火鍋", "甜點", "壽司", "牛排", "燒烤", "義大利麵", "拉麵", "飲料"}
+        # unique_excluded = [item for item in unique_excluded if item in known_categories]
+
+        return Response({'excluded': unique_excluded})
 
 # 功能 2：推薦理由補強 + 結構化輸出
 class GenerateRecommendReasonView(APIView):
@@ -103,22 +108,36 @@ class GenerateRecommendReasonView(APIView):
 
         return Response({"results": results})
 
-# 功能 3：模糊語句提示
+# 功能 3（優化版）：模糊語句提示
 class GeneratePromptView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         user_input = request.data.get("input", "").strip()
-        vague_keywords = {"隨便", "都可以", "沒意見", "看你", "不知道", "你決定"}
+
+        # 常見模糊語句組
+        vague_keywords = {
+            "輕微": ["沒想法", "還沒想好", "沒特別想吃"],
+            "中等": ["無所謂", "都可以", "都行", "看著辦", "再說吧"],
+            "明確": ["隨便", "你決定", "你幫我選", "看你", "不知道", "沒意見"],
+        }
+
         prompt = "你有想吃的類型嗎？或是有不想吃的？"
 
-        if any(keyword in user_input for keyword in vague_keywords):
-            prompt = "你有不喜歡吃的東西嗎？像是不吃辣、不吃牛？"
+        for level, phrases in vague_keywords.items():
+            if any(p in user_input for p in phrases):
+                if level == "輕微":
+                    prompt = "可以想一下今天有沒有想吃的方向，像是簡單吃或想吃特別的？"
+                elif level == "中等":
+                    prompt = "那你偏好什麼類型呢？或是有不想吃的東西嗎？"
+                else:  # 明確模糊
+                    prompt = "你有不喜歡吃的嗎？像是不吃辣、不吃牛？我們可以幫你排除～"
+                break
 
         return Response({"prompt": prompt}, status=status.HTTP_200_OK)
 
 
-# 功能 3-2：互動式語句引導建議
+# 功能 3-2：互動式語句引導建議（優化版）
 class SuggestInputGuidanceView(APIView):
     permission_classes = [AllowAny]
 
@@ -127,9 +146,22 @@ class SuggestInputGuidanceView(APIView):
         suggestion = '您可以輸入想吃的類型、場合、預算等資訊，我們會給您更好的建議！'
 
         rules = [
+            (['不想吃', '不要', '不吃'], '已偵測到排除類型，可以幫您濾除不想吃的餐廳'),
             (['不想吃火鍋', '不要火鍋'], '已排除火鍋類型，可考慮中式或日式餐廳'),
+            (['不吃辣', '怕辣'], '已排除辣味餐廳，推薦清爽或湯品類型'),
+            (['不吃牛'], '會幫您排除牛肉相關選項'),
+            (['吃素'], '已識別為素食需求，可推薦素食或蔬食友善餐廳'),
+
             (['約會'], '氣氛佳的推薦適合約會，可考慮咖啡廳或裝潢溫馨的餐廳'),
-            (['不貴', '便宜'], '偏好不貴的餐廳，可以優先查看平價高評價選項'),
+            (['家庭聚餐'], '適合多人用餐，可考慮寬敞空間與多樣菜色的選擇'),
+            (['朋友聚餐'], '適合朋友聚會，可推薦平價熱鬧或多人套餐餐廳'),
+
+            (['不貴', '便宜', '小資'], '偏好不貴的餐廳，可以優先查看平價高評價選項'),
+            (['高級', '精緻', '高價'], '偏好精緻體驗，可推薦高評價或高端餐廳'),
+
+            (['宵夜'], '深夜推薦營業中的輕食、炸物或拉麵等店家'),
+            (['早午餐'], '可推薦氣氛佳、評價高的早午餐店'),
+            (['下午茶'], '可考慮甜點或咖啡廳，有悠閒空間與高評價餐點'),
         ]
 
         for keywords, response in rules:
@@ -138,6 +170,7 @@ class SuggestInputGuidanceView(APIView):
                 break
 
         return Response({'guidance': suggestion}, status=status.HTTP_200_OK)
+
 
 
 # 功能 4：推薦卡片欄位模擬輸出
