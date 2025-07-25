@@ -3,4 +3,6 @@ from . import views
 
 urlpatterns = [
     path('recommend/', views.recommend_restaurant, name='recommend_restaurant'),
+    path('save_preference/', views.save_user_preference, name='save_user_preference'),
+    path('get_preference/', views.get_user_preference, name='get_user_preference'),
 ]
