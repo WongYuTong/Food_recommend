@@ -42,7 +42,7 @@ class ExtractNegativeConditionsView(APIView):
 
         return Response({'excluded': unique_excluded})
 
-# 功能 2：推薦理由補強 + 結構化輸出
+# 功能 2：推薦理由補強 + 結構化輸出（優化版）
 class GenerateRecommendReasonView(APIView):
     permission_classes = [AllowAny]
 
@@ -61,38 +61,67 @@ class GenerateRecommendReasonView(APIView):
             matched_tags = restaurant.get('matched_tags', [])
             distance = restaurant.get('distance', '未知')
             reason_score = restaurant.get('reason_score', None)
+            price_level = restaurant.get('price_level', '')
 
-            # 將布林值 is_open 轉為顯示用文字
+            # 1. 營業狀態文字化
             if isinstance(is_open_raw, bool):
                 is_open = "營業中" if is_open_raw else "休息中"
             elif isinstance(is_open_raw, str):
-                is_open = is_open_raw  # 若已是字串則保留
+                is_open = is_open_raw
             else:
                 is_open = "無資料"
 
-            # 推薦理由主句
+            # 2. 主推薦理由
+            reason_source = "inference"
+            core_reason = ""
+
             if ai_reason:
-                reason = ai_reason
+                core_reason = ai_reason
+                reason_source = "ai"
             elif comment_summary:
-                reason = comment_summary
+                core_reason = comment_summary
+                reason_source = "summary"
             else:
-                reasons = []
+                core_reasons = []
                 if rating >= 4.5:
-                    reasons.append("評價很高")
+                    core_reasons.append("評價很高")
                 if "台北" in address:
-                    reasons.append("地點方便")
-                if not reasons:
-                    reasons.append("整體評價不錯")
-                reason = "、".join(reasons)
+                    core_reasons.append("地點方便")
+                if not core_reasons:
+                    core_reasons.append("整體評價不錯")
+                core_reason = "、".join(core_reasons)
 
-            # 補強內容
-            extra = []
+            # 3. 補強 extra 理由（標籤、highlight、價格、地點）
+            extra_reasons = []
+
             if highlight:
-                extra.append(highlight)
+                extra_reasons.append(highlight)
             if matched_tags:
-                extra.extend(matched_tags)
+                extra_reasons.extend(matched_tags)
 
-            full_reason = "、".join([reason] + extra)
+            # 補強價格
+            if price_level == "$":
+                extra_reasons.append("價格實惠")
+            elif price_level == "$$":
+                extra_reasons.append("價格中等")
+            elif price_level == "$$$":
+                extra_reasons.append("偏高價位")
+
+            # 補強地區名稱（簡易從地址擷取）
+            district_match = re.search(r'(台北市|新北市)?(\w{2,3}區)', address)
+            if district_match:
+                district = district_match.group(2)
+                extra_reasons.append(f"位於{district}")
+
+            # 4. 結構化推薦理由
+            reason_summary = {
+                "source": reason_source,
+                "core": core_reason,
+                "extra": extra_reasons
+            }
+
+            # 5. 合併成一行文字（給前端顯示用）
+            full_reason = "、".join([core_reason] + extra_reasons)
 
             results.append({
                 "name": name,
@@ -100,13 +129,16 @@ class GenerateRecommendReasonView(APIView):
                 "is_open": is_open,
                 "rating": rating,
                 "reason": full_reason,
+                "reason_summary": reason_summary,
                 "distance": distance,
                 "reason_score": reason_score,
                 "highlight": highlight,
                 "matched_tags": matched_tags,
+                "price_level": price_level
             })
 
         return Response({"results": results})
+
 
 # 功能 3（優化版）：模糊語句提示
 class GeneratePromptView(APIView):
