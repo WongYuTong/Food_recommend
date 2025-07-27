@@ -140,33 +140,45 @@ class GenerateRecommendReasonView(APIView):
         return Response({"results": results})
 
 
-# 功能 3（優化版）：模糊語句提示
+# 功能 3：模糊語句提示（進階優化版）
 class GeneratePromptView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         user_input = request.data.get("input", "").strip()
 
-        # 常見模糊語句組
         vague_keywords = {
-            "輕微": ["沒想法", "還沒想好", "沒特別想吃"],
-            "中等": ["無所謂", "都可以", "都行", "看著辦", "再說吧"],
-            "明確": ["隨便", "你決定", "你幫我選", "看你", "不知道", "沒意見"],
+            "輕微": [
+                "沒想法", "還沒想好", "沒特別想吃", "還不知道吃什麼", "需要想一下", "再看看"
+            ],
+            "中等": [
+                "都可以", "無所謂", "你看著辦", "你幫我選", "再說吧", "看心情", "看著辦"
+            ],
+            "明確": [
+                "隨便", "你決定", "不知道", "沒意見", "不知道吃什麼", "不清楚", "沒想吃的"
+            ]
         }
 
-        prompt = "你有想吃的類型嗎？或是有不想吃的？"
+        # 預設提示語
+        level = "無"
+        prompt = "有特別想吃的嗎？也可以說說你不想吃的類型，我們來幫你挑～"
 
-        for level, phrases in vague_keywords.items():
-            if any(p in user_input for p in phrases):
-                if level == "輕微":
-                    prompt = "可以想一下今天有沒有想吃的方向，像是簡單吃或想吃特別的？"
-                elif level == "中等":
-                    prompt = "那你偏好什麼類型呢？或是有不想吃的東西嗎？"
-                else:  # 明確模糊
-                    prompt = "你有不喜歡吃的嗎？像是不吃辣、不吃牛？我們可以幫你排除～"
+        # 判斷模糊程度
+        for current_level, keywords in vague_keywords.items():
+            if any(keyword in user_input for keyword in keywords):
+                level = current_level
+                if current_level == "輕微":
+                    prompt = "想一下今天是想吃簡單一點的，還是想來點特別的呢？"
+                elif current_level == "中等":
+                    prompt = "那你偏好什麼類型呢？或是有不喜歡吃的料理？我們可以先排除看看！"
+                elif current_level == "明確":
+                    prompt = "沒問題！先從排除不愛吃的類型開始吧～像是不吃辣、不吃炸物這些都可以說唷！"
                 break
 
-        return Response({"prompt": prompt}, status=status.HTTP_200_OK)
+        return Response({
+            "level": level,
+            "prompt": prompt
+        }, status=status.HTTP_200_OK)
 
 
 # 功能 3-2：互動式語句引導建議（優化版）
