@@ -10,33 +10,33 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 
-# 功能 1：反向推薦條件擷取（強化版）
+# 功能 1：反向推薦條件擷取（優化後最終版）
 class ExtractNegativeConditionsView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
         user_input = request.data.get('text', '')
 
-        negative_patterns = [
-            r'不想吃(.+?)(?:[，。!！,\.]|$)',
-            r'不想要(.+?)(?:[，。!！,\.]|$)',
-            r'不要(.+?)(?:[，。!！,\.]|$)',
-            r'不吃(.+?)(?:[，。!！,\.]|$)',
-            r'別推薦(.+?)(?:[，。!！,\.]|$)',
-        ]
+       # ✅ 支援更多前綴詞（我、不過、可能…）
+        prefix_variants = r'(?:我|不過|那就|可能)?'
+        negative_verbs = r'(不想吃|不想要|不要|不吃|別推薦|不要推薦)'
 
+        # 🔍 組合成彈性正則：抓出否定語句
+        pattern = rf'{prefix_variants}{negative_verbs}(.+?)(?:[，。!！,\.]|$)'
+
+        matches = re.findall(pattern, user_input)
         excluded_items = []
-        for pattern in negative_patterns:
-            matches = re.findall(pattern, user_input)
-            for match in matches:
-                # 這裡是加強版：能抓「甜點、義大利麵」中兩個詞
-                split_items = re.split(r'[,、，和跟以及或還有\s]+', match)
-                excluded_items.extend([item.strip() for item in split_items if item.strip()])
 
-        # 去除重複與空白
-        unique_excluded = list(set(excluded_items))
+        for match in matches:
+            # 若 match 是 tuple（前綴 + 動詞 + 內容），我們只取內容
+            content = match[1] if isinstance(match, tuple) else match
+            split_items = re.split(r'[,、，和跟以及或還有\s]+', content)
+            excluded_items.extend([item.strip() for item in split_items if item.strip()])
 
-        # ✅ 可選：只保留已知分類（未來接資料庫可開啟）
+        # 去除重複並排序（方便測試與展示）
+        unique_excluded = sorted(set(excluded_items))
+
+        # ✅ 可選功能：只保留已知分類（未來整合資料庫或tag列表時可開啟）
         # known_categories = {"火鍋", "甜點", "壽司", "牛排", "燒烤", "義大利麵", "拉麵", "飲料"}
         # unique_excluded = [item for item in unique_excluded if item in known_categories]
 
