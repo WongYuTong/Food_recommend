@@ -1,3 +1,5 @@
+# views.py
+
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -39,12 +41,12 @@ def recommend_restaurant(request):
 
         # 自動解析使用者輸入偏好並更新到 DB（以結構化方式）
         parsed_preferences = parse_preference_from_text(user_message)
-        if parsed_preferences and user_id and User.objects.filter(id=user_id).exists():
+        if parsed_preferences and parsed_preferences != ["無特別偏好"] and user_id and User.objects.filter(id=user_id).exists():
             UserPreference.objects.update_or_create(
                 user_id=user_id,
                 defaults={"preferences": json.dumps(parsed_preferences, ensure_ascii=False)}
             )
-            user_preferences = parsed_preferences  # 回傳剛存的偏好以便推薦模組使用
+            user_preferences = parsed_preferences  # 更新使用者偏好
 
         # 初始化推薦控制器
         controller = RestaurantRecommendationController()
