@@ -58,12 +58,13 @@ class GenerateRecommendReasonView(APIView):
             ai_reason = restaurant.get('ai_reason', '')
             comment_summary = restaurant.get('comment_summary', '')
             highlight = restaurant.get('highlight', '')
-            matched_tags = restaurant.get('matched_tags', [])
+            tags = restaurant.get('matched_tags', [])  # 統一命名
             distance = restaurant.get('distance', '未知')
             reason_score = restaurant.get('reason_score', None)
             price_level = restaurant.get('price_level', '')
+            review_count = restaurant.get('review_count', 0)
 
-            # 1. 營業狀態文字化
+            # 1. 營業狀態轉換
             if isinstance(is_open_raw, bool):
                 is_open = "營業中" if is_open_raw else "休息中"
             elif isinstance(is_open_raw, str):
@@ -71,7 +72,7 @@ class GenerateRecommendReasonView(APIView):
             else:
                 is_open = "無資料"
 
-            # 2. 主推薦理由
+            # 2. 推薦主因分類
             reason_source = "inference"
             core_reason = ""
 
@@ -85,56 +86,62 @@ class GenerateRecommendReasonView(APIView):
                 core_reasons = []
                 if rating >= 4.5:
                     core_reasons.append("評價很高")
+                if review_count and review_count >= 300:
+                    core_reasons.append("評論數多")
                 if "台北" in address:
                     core_reasons.append("地點方便")
                 if not core_reasons:
                     core_reasons.append("整體評價不錯")
                 core_reason = "、".join(core_reasons)
 
-            # 3. 補強 extra 理由（標籤、highlight、價格、地點）
+            # 3. 補強額外理由
             extra_reasons = []
 
             if highlight:
                 extra_reasons.append(highlight)
-            if matched_tags:
-                extra_reasons.extend(matched_tags)
+            if tags:
+                extra_reasons.extend(tags)
 
             # 補強價格
-            if price_level == "$":
-                extra_reasons.append("價格實惠")
-            elif price_level == "$$":
-                extra_reasons.append("價格中等")
-            elif price_level == "$$$":
-                extra_reasons.append("偏高價位")
+            price_map = {
+                "$": "價格實惠",
+                "$$": "價格中等",
+                "$$$": "偏高價位",
+                "$$$$": "高端消費"
+            }
+            if price_level in price_map:
+                extra_reasons.append(price_map[price_level])
 
-            # 補強地區名稱（簡易從地址擷取）
+            # 補強地區名稱
             district_match = re.search(r'(台北市|新北市)?(\w{2,3}區)', address)
             if district_match:
                 district = district_match.group(2)
                 extra_reasons.append(f"位於{district}")
 
-            # 4. 結構化推薦理由
+            # 自動生成地圖連結
+            map_url = f"https://www.google.com/maps/search/{name}" if name else ""
+
+            # 整理推薦理由格式
             reason_summary = {
                 "source": reason_source,
                 "core": core_reason,
                 "extra": extra_reasons
             }
 
-            # 5. 合併成一行文字（給前端顯示用）
             full_reason = "、".join([core_reason] + extra_reasons)
 
             results.append({
                 "name": name,
-                "address": address,
+                "recommend_reason": full_reason,
+                "highlight": highlight,
+                "tags": tags,
+                "price_level": price_level,
+                "review_count": review_count,
                 "is_open": is_open,
-                "rating": rating,
-                "reason": full_reason,
-                "reason_summary": reason_summary,
+                "map_url": map_url,
                 "distance": distance,
                 "reason_score": reason_score,
-                "highlight": highlight,
-                "matched_tags": matched_tags,
-                "price_level": price_level
+                "reason_summary": reason_summary
             })
 
         return Response({"results": results})
