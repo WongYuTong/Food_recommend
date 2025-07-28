@@ -229,18 +229,54 @@ class GenerateCardDataView(APIView):
             name = r.get('name', '')
             rating = r.get('rating', 0)
             address = r.get('address', '')
+            is_open = r.get('is_open', None)  # 可選欄位
 
+            # 區域標籤擷取（信義區、中山區等）
+            district_match = re.search(r'(台北市|新北市)?(\w{2,3}區)', address)
+            district = district_match.group(2) if district_match else ''
+            
+            # 標籤產生
             tags = []
-            if "燒肉" in name or "燒肉" in address:
-                tags.append("燒肉")
+            keyword_map = {
+                '燒肉': ['燒肉'],
+                '甜點': ['甜點', '蛋糕'],
+                '拉麵': ['拉麵'],
+                '火鍋': ['火鍋', '麻辣'],
+                '早午餐': ['早午餐', 'Brunch'],
+                '漢堡': ['漢堡', '美式'],
+                '日式': ['壽司', '日式'],
+                '中式': ['中餐', '中式'],
+                '韓式': ['韓式', '泡菜']
+            }
+            for tag, keywords in keyword_map.items():
+                if any(k in name or k in address for k in keywords):
+                    tags.append(tag)
+
             if rating >= 4.5:
                 tags.append("高評價")
-            if "台北" in address:
-                tags.append("地點佳")
+            if district:
+                tags.append(district)
+            if is_open is not None:
+                tags.append("目前營業中" if is_open else "尚未營業")
 
-            highlight = "甜點評價高" if "甜" in name else "交通方便"
-            distance = "800 公尺"  # 假資料，之後可由爬蟲或地圖服務提供
+            # highlight（亮點）
+            if '甜' in name or '甜點' in name:
+                highlight = "甜點評價高"
+            elif rating >= 4.5:
+                highlight = "Google 評價 4.5 分以上"
+            elif '交通' in name or '捷運' in address:
+                highlight = "交通方便"
+            else:
+                highlight = "地點便利"
 
+            # 模擬距離（之後可改為真實資料）
+            distance = "850 公尺"  # 假資料
+
+            # 推薦理由組合（避免重複）
+            combined = list(dict.fromkeys(tags + [highlight]))
+            reason = "、".join(combined)
+
+            # 輸出結果
             results.append({
                 "name": name,
                 "rating": rating,
@@ -248,7 +284,7 @@ class GenerateCardDataView(APIView):
                 "tags": tags,
                 "highlight": highlight,
                 "distance": distance,
-                "reason": "、".join(tags + [highlight])
+                "reason": reason
             })
 
         return Response({"results": results})
