@@ -67,13 +67,18 @@ class PostCreateForm(forms.ModelForm):
         required=True,
         widget=forms.Select()
     )
+    dining_date = forms.DateField(
+        label="用餐日期",
+        required=True,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
 
     class Meta:
         model = Post
         fields = [
             'title', 'content', 'location_name', 'location_address',
             'location_lat', 'location_lng', 'location_place_id',
-            'restaurant_type', 'meal_time'
+            'restaurant_type', 'meal_time', 'dining_date'
         ]
         widgets = {
             'title': forms.TextInput(attrs={'placeholder': '請輸入標題'}),
@@ -84,6 +89,7 @@ class PostCreateForm(forms.ModelForm):
             'location_lng': forms.HiddenInput(attrs={'id': 'location-lng'}),
             'location_place_id': forms.HiddenInput(attrs={'id': 'location-place-id'}),
             'meal_time': forms.Select(attrs={'id': 'meal-time'}),
+            'dining_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         }
         labels = {
             'title': '標題',
