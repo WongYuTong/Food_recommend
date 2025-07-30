@@ -134,3 +134,4 @@ function updateSubcategoryOptions(selectedType, subcategoryMap) {
         console.log('主類型未選擇或無細項');
     }
 }
+
