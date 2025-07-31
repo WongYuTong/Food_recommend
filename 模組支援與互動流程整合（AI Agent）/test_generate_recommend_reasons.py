@@ -1,5 +1,6 @@
 import requests
 import json
+from termcolor import colored  # 若未安裝請執行：pip install termcolor
 
 url = "http://localhost:8000/agent/generate_recommend_reasons/"
 
@@ -63,49 +64,53 @@ expected_keys = [
     "map_url", "distance", "reason_score", "reason_summary"
 ]
 
-# 發送 POST 請求
+print(colored("📡 正在發送 POST 請求...", "cyan"))
 response = requests.post(url, json={"restaurants": [t["input"] for t in test_data]})
-print("📥 狀態碼:", response.status_code)
+print(colored(f"📥 狀態碼: {response.status_code}", "cyan"))
 
 if response.status_code != 200:
-    print("❌ API 請求失敗")
+    print(colored("❌ API 請求失敗", "red"))
     exit()
 
 results = response.json().get("results", [])
 success_count = 0
 failures = []
 
-print("\n🎯 開始比對結果...\n")
+print(colored("\n🎯 開始比對結果...\n", "blue"))
 
 for i, (res, test) in enumerate(zip(results, test_data), 1):
     name = res.get("name", f"第{i}筆資料")
-    print(f"🧪 測試 {i}: {name}")
+    print(colored(f"🧪 測試 {i}: {name}", "yellow"))
 
     missing_keys = [k for k in expected_keys if k not in res]
     missing_keywords = [kw for kw in test["expected_keywords"] if kw not in res.get("recommend_reason", "")]
 
     if not missing_keys and not missing_keywords:
-        print("✅ 通過")
+        print(colored("✅ 通過", "green"))
         success_count += 1
     else:
-        print("❌ 失敗")
+        print(colored("❌ 失敗", "red"))
         if missing_keys:
-            print("  ⛔ 缺少欄位:", missing_keys)
+            print(colored("  ⛔ 缺少欄位: ", "red"), missing_keys)
         if missing_keywords:
-            print("  ⛔ 推薦理由缺少關鍵字:", missing_keywords)
-        failures.append({"name": name, "missing_keys": missing_keys, "missing_keywords": missing_keywords})
+            print(colored("  ⛔ 推薦理由缺少關鍵字: ", "red"), missing_keywords)
+        failures.append({
+            "name": name,
+            "missing_keys": missing_keys,
+            "missing_keywords": missing_keywords
+        })
 
     print("-" * 40)
 
 # 測試總結
-print("\n📊 測試總結")
-print(f"✔️ 通過數量：{success_count}")
-print(f"❌ 失敗數量：{len(results) - success_count}")
+print(colored("\n📊 測試總結", "blue"))
+print(colored(f"✔️ 通過數量：{success_count}", "green"))
+print(colored(f"❌ 失敗數量：{len(results) - success_count}", "red"))
 
 if failures:
-    print("\n📌 詳細失敗原因：")
+    print(colored("\n📌 詳細失敗原因：", "magenta"))
     for fail in failures:
-        print(f"- {fail['name']}")
+        print(colored(f"- {fail['name']}", "red"))
         if fail["missing_keys"]:
             print("  缺少欄位:", fail["missing_keys"])
         if fail["missing_keywords"]:
