@@ -37,24 +37,32 @@ test_cases = [
 
 success_count = 0
 fail_count = 0
+failed_cases = []
 
 print("\n🎯 開始測試 SuggestInputGuidanceView...\n")
 
 for idx, (text, expected_keywords) in enumerate(test_cases, 1):
     response = requests.post(url, json={"text": text})
-    content = response.json().get("guidance", "")
-    found = any(keyword in content for keyword in expected_keywords)
+    result = response.json().get("guidance", "")
+    found = any(keyword in result for keyword in expected_keywords)
 
-    print(f"測試 {idx:2}: {text}")
-    print("狀態碼:", response.status_code)
-    print("回應內容:", content)
+    print(f"🧪 測試 {idx:2}: {text}")
+    print(f"📥 回傳內容: {result}")
     if found:
-        print("✅ 匹配結果: ✔️\n")
+        print("✅ 匹配結果：✔️ 通過\n")
         success_count += 1
     else:
-        print(f"❌ 匹配結果: ❌（預期包含關鍵詞：{', '.join(expected_keywords)}）\n")
+        print(f"❌ 匹配結果：❌ 失敗（應包含：{', '.join(expected_keywords)}）\n")
         fail_count += 1
+        failed_cases.append((text, result, expected_keywords))
 
-print("🧾 測試完成")
-print(f"✔️ 通過數量: {success_count}")
-print(f"❌ 失敗數量: {fail_count}")
+print("📊 測試結果統計")
+print(f"✔️ 通過：{success_count}")
+print(f"❌ 失敗：{fail_count}")
+
+if failed_cases:
+    print("\n📌 失敗案例回顧：")
+    for text, response, expected in failed_cases:
+        print(f"- ❌ 測試輸入：{text}")
+        print(f"  回傳內容：{response}")
+        print(f"  預期關鍵詞：{expected}\n")
