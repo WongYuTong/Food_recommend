@@ -84,9 +84,14 @@
                 <!-- 貼文內容（標題、分類、內文） -->
                 <div class="card-body">
                     <h3 class="card-title mb-2">{{ post.title }}</h3>
+                    {% if post.dining_date %}
+                        <div class="mb-3 text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i> 用餐日期：{{ post.dining_date|date:"Y-m-d" }}
+                        </div>
+                    {% endif %}
                     <div class="card-text mb-4">{{ post.content|linebreaks }}</div>
                     <!-- 分類 badge 區塊移到這裡 -->
-                    <div class="post-meta-badges mt-3 mb-4">
+                    <div class="post-meta-badges mt-3 mb-3">
                         {% if post.primary_category %}
                             <span class="badge bg-info text-dark post-meta-badge-large">
                                 <i class="fas fa-utensils me-1"></i>{{ post.primary_category }}
