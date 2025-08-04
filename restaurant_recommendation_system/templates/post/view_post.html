@@ -110,24 +110,22 @@
                     </div>
                     <!-- 圖片區塊 -->
                     {% if post.images.count > 0 %}
-                    <div class="post-image-row mb-3">
+                    <div class="post-image-row mb-3 d-flex flex-wrap">
                         {% for img in post.images.all %}
                             <img src="{{ img.image.url }}" class="post-detail-img me-2 mb-2"
                                 alt="{{ post.title }}"
-                                style="cursor: pointer; max-width: 120px; max-height: 120px; object-fit: cover;"
                                 data-bs-toggle="modal"
                                 data-bs-target="#imageModal"
                                 data-img-index="{{ forloop.counter0 }}">
                         {% endfor %}
                     </div>
-                {% elif post.image %}
-                    <img src="{{ post.image.url }}" class="post-detail-img mb-2"
-                        alt="{{ post.title }}"
-                        style="cursor: pointer; max-width: 220px; max-height: 220px; object-fit: cover;"
-                        data-bs-toggle="modal"
-                        data-bs-target="#imageModal"
-                        data-img-index="0">
-                {% endif %}
+                    {% elif post.image %}
+                        <img src="{{ post.image.url }}" class="post-detail-img mb-2 single-img"
+                            alt="{{ post.title }}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#imageModal"
+                            data-img-index="0">
+                    {% endif %}
                     <!-- 餐廳位置信息 -->
                     {% if post.location_name %}
                     <div class="location-box">
