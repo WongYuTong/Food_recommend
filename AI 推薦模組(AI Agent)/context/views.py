@@ -1,5 +1,3 @@
-# views.py
-
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -21,37 +19,27 @@ def recommend_restaurant(request):
         user_location = data.get("location", {})
         user_id = data.get("user_id", None)
 
-        # 取得當前情境（時段、平日/週末/節日）
         context_info = get_current_context_info()
-
-        # 解析使用者輸入情緒
         detected_emotions = parse_emotion_from_text(user_message)
-
-        # 預設偏好為空 dict
         user_preferences = {}
 
-        # 嘗試讀取使用者偏好
         if user_id and User.objects.filter(id=user_id).exists():
             user_pref_obj = UserPreference.objects.filter(user_id=user_id).first()
             if user_pref_obj:
                 try:
                     user_preferences = json.loads(user_pref_obj.preferences)
-                except:
-                    user_preferences = user_pref_obj.preferences
+                except Exception:
+                    user_preferences = {}
 
-        # 自動解析使用者輸入偏好並更新到 DB（以結構化方式）
         parsed_preferences = parse_preference_from_text(user_message)
         if parsed_preferences and parsed_preferences != ["無特別偏好"] and user_id and User.objects.filter(id=user_id).exists():
             UserPreference.objects.update_or_create(
                 user_id=user_id,
                 defaults={"preferences": json.dumps(parsed_preferences, ensure_ascii=False)}
             )
-            user_preferences = parsed_preferences  # 更新使用者偏好
+            user_preferences = parsed_preferences
 
-        # 初始化推薦控制器
         controller = RestaurantRecommendationController()
-
-        # 執行推薦，將偏好傳入
         response = controller.process_query(
             query_text=user_message,
             user_location=user_location,
@@ -60,7 +48,6 @@ def recommend_restaurant(request):
             preferences=user_preferences
         )
 
-        # 回傳結果
         return JsonResponse({
             "status": "success",
             "data": {
@@ -92,7 +79,6 @@ def save_user_preference(request):
         if not User.objects.filter(id=user_id).exists():
             return JsonResponse({"status": "error", "message": "使用者不存在"}, status=404)
 
-        # 使用文字偏好解析器進行結構化
         parsed_preferences = parse_preference_from_text(preferences_text)
         if not parsed_preferences:
             parsed_preferences = {"提示": "未偵測到明確偏好"}
@@ -124,11 +110,63 @@ def get_user_preference(request):
         if user_pref_obj:
             try:
                 preferences = json.loads(user_pref_obj.preferences)
-            except:
-                preferences = user_pref_obj.preferences
+            except Exception:
+                preferences = {}
 
         return JsonResponse({"status": "success", "preferences": preferences})
 
     except Exception as e:
         print(f"讀取使用者偏好錯誤：{str(e)}")
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def delete_user_preference_item(request):
+    try:
+        data = json.loads(request.body)
+        user_id = data.get("user_id")
+        item_to_delete = data.get("item")
+
+        if not user_id or not item_to_delete:
+            return JsonResponse({"status": "error", "message": "缺少 user_id 或 item"}, status=400)
+
+        if not User.objects.filter(id=user_id).exists():
+            return JsonResponse({"status": "error", "message": "使用者不存在"}, status=404)
+
+        user_pref_obj = UserPreference.objects.filter(user_id=user_id).first()
+        if not user_pref_obj:
+            return JsonResponse({"status": "error", "message": "找不到偏好資料"}, status=404)
+
+        try:
+            preferences = json.loads(user_pref_obj.preferences)
+        except Exception:
+            preferences = {}
+
+        if not isinstance(preferences, dict):
+            return JsonResponse({"status": "error", "message": "偏好格式錯誤"}, status=500)
+
+        found = False
+        for category in ["喜歡", "不喜歡"]:
+            if category in preferences and item_to_delete in preferences[category]:
+                preferences[category].remove(item_to_delete)
+                found = True
+                break
+
+        if not found:
+            return JsonResponse({"status": "error", "message": f"{item_to_delete} 不存在於偏好資料中"}, status=404)
+
+        UserPreference.objects.update_or_create(
+            user_id=user_id,
+            defaults={"preferences": json.dumps(preferences, ensure_ascii=False)}
+        )
+
+        return JsonResponse({
+            "status": "success",
+            "message": f"已成功刪除偏好項目：{item_to_delete}",
+            "updated_preferences": preferences
+        })
+
+    except Exception as e:
+        print(f"刪除使用者偏好錯誤：{str(e)}")
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
