@@ -253,3 +253,12 @@ class UserPreferenceDetail(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.preference_type}: {self.preference_value} ({self.score})"
+
+class UserPreferenceSummary(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='preference_summaries')
+    preference_type = models.CharField(max_length=20)
+    preference_value = models.CharField(max_length=255)
+    total_score = models.FloatField()      # 體驗情感分數
+    count = models.IntegerField(default=0) # 正負面出現次數
+    try_count = models.IntegerField(default=0)  # 嘗試次數（不論正負）
+    updated_at = models.DateTimeField(auto_now=True)
