@@ -1,7 +1,8 @@
 from ckip_transformers.nlp import CkipWordSegmenter, CkipPosTagger
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForTokenClassification
 from tqdm import tqdm
 import re
+from collections import Counter
 
 class CKIPTransformersTests:
     @classmethod
@@ -10,135 +11,165 @@ class CKIPTransformersTests:
         cls.pos_driver = CkipPosTagger(model="bert-base")
         cls.zero_shot = pipeline("zero-shot-classification", model="joeddav/xlm-roberta-large-xnli")
         cls.sentiment = pipeline("zero-shot-classification", model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
+        # 加入 NER pipeline
+        cls.ner = pipeline("ner", model="ckiplab/bert-base-chinese-ner", tokenizer="ckiplab/bert-base-chinese-ner", aggregation_strategy="simple")
 
     def test_fake_post_analysis(self):
-        fake_posts = [
-            "這家火鍋的湯頭很棒，服務生態度親切，價格也很合理，下次還會再來！",
-            "壽司不新鮮，環境有點髒亂，服務也不太好。",
-            "牛排很好吃，CP值高，推薦給大家！",
-            "冰淇淋口味普通，服務速度很慢。",
-            "拉麵湯頭太鹹，價格偏貴，但環境很舒適。",
-            "拉麵湯頭很鹹但是我很喜歡XD",
-            "拉麵湯頭很鹹，但是我很喜歡XD",
-        ]
-        candidate_labels = ["食物", "服務", "價格", "環境", "整體"]
-        sentiment_labels = ["正面", "中立", "負面"]
-        turn_words = ["但是", "但", "可是", "不過"]
+        exclude_nouns = set(["東西", "餐點", "料理", "食物", "東西們"])
+        # 新增排除泛用詞與描述性詞彙
+        exclude_foods = set([
+            # 描述性、泛指、雜訊詞
+            "口","有機","份","公共","一","一份","本家","家","價格", "湯頭", "質感", "份量", "口味", "部分", "一些", "這家", "新品", "主廚手藝", "香氣", "甜點部分", "肉質", "肉品", "味噌湯鹹度", "紅豆餡", "紅豆餅外皮", "冰塊", "茶香", "抹茶布丁口感", "九層塔香氣", "巧克力慕斯蛋", "糕", "白飯", "餅皮", "餡", "肉", "甜麵醬", "青菜", "菜", "飲料", "醬料", "蔥段", "布丁口感", "慕斯蛋糕", "蛋糕味道"
+        ])
+        # 讀取 all_reviews.json 前 50 則非 "無評論" 的評論
+        import json
+        with open("all_reviews.json", "r", encoding="utf-8") as f:
+            all_reviews = json.load(f)
+        fake_posts = []
+        for item in all_reviews:
+            review = item.get("評論內容", "").strip()
+            if review and review != "無評論":
+                fake_posts.append(review)
+            if len(fake_posts) >=100:
+                break
+        # 可自訂常見食物/口味詞庫
+        flavor_keywords = set(["鹹", "甜", "辣", "苦", "酸", "香", "口味"])
+        food_keywords = set([
+            "火鍋", "壽司", "牛排", "冰淇淋", "拉麵", "小菜", "燒肉", "霜淇淋", "蛋糕", "布丁", "雞肉", "豬排", "蝦仁", "飯", "麵", "餅", "奶茶", "咖哩", "鴨", "牛肉", "雞", "魚", "豆腐", "紅豆", "抹茶", "巧克力", "芒果", "檸檬", "九層塔", "馬鈴薯", "蒜香", "椒麻", "炸雞", "炸豬排", "冰沙", "燉飯", "義大利麵", "甜點", "慕斯", "小黃瓜"])
+        # 移除泛用詞如湯頭、青菜、飲料、醬料、餡、餅皮、蔥段、餅、餡、家火鍋等
+        food_counter = Counter()
+        flavor_counter = Counter()
+
+        candidate_labels = ["食物", "食物種類", "食物口味"]
+        # 統計名詞+名詞、三連詞、四連詞、名詞+形容詞組合
+        nn_counter = Counter()  # 名詞+名詞
+        nnn_counter = Counter() # 三連詞
+        nnnn_counter = Counter() # 四連詞
+        na_counter = Counter()  # 名詞+形容詞
 
         for idx, content in enumerate(tqdm(fake_posts, desc="分析貼文")):
             print(f"\n=== 貼文{idx+1} ===")
             print("原文：", content)
+            # 1. 先用 NER 抽取所有產品類（部分食物會被標為產品）
+            ner_results = self.ner(content)
+            ner_foods = set([ent['word'] for ent in ner_results if ent['entity_group'] == 'PRODUCT'])
+            # 2. CKIP 斷詞抓食物/口味關鍵字
+            ws = self.ws_driver([content])[0]
+            pos = self.pos_driver([ws])[0]
+            ckip_foods = set()
+            ckip_flavors = set()
+            cur_phrase = []
+            for i in range(len(ws)):
+                w, p = ws[i], pos[i]
+                # 名詞+名詞組合（只要組合不在 exclude_foods，且兩詞都不在 exclude_foods）
+                if p.startswith("N") and i+1 < len(ws):
+                    if pos[i+1].startswith("N"):
+                        nn_phrase = ws[i] + ws[i+1]
+                        if (
+                            nn_phrase not in exclude_foods
+                            and ws[i] not in exclude_foods
+                            and ws[i+1] not in exclude_foods
+                        ):
+                            nn_counter[nn_phrase] += 1
+                    # 三連詞
+                    if i+2 < len(ws) and pos[i+1].startswith("N") and pos[i+2].startswith("N"):
+                        nnn_phrase = ws[i] + ws[i+1] + ws[i+2]
+                        if (
+                            nnn_phrase not in exclude_foods
+                            and ws[i] not in exclude_foods
+                            and ws[i+1] not in exclude_foods
+                            and ws[i+2] not in exclude_foods
+                        ):
+                            nnn_counter[nnn_phrase] += 1
+                    # 四連詞
+                    if i+3 < len(ws) and pos[i+1].startswith("N") and pos[i+2].startswith("N") and pos[i+3].startswith("N"):
+                        nnnn_phrase = ws[i] + ws[i+1] + ws[i+2] + ws[i+3]
+                        if (
+                            nnnn_phrase not in exclude_foods
+                            and ws[i] not in exclude_foods
+                            and ws[i+1] not in exclude_foods
+                            and ws[i+2] not in exclude_foods
+                            and ws[i+3] not in exclude_foods
+                        ):
+                            nnnn_counter[nnnn_phrase] += 1
+                    # 名詞+形容詞
+                    if pos[i+1].startswith("A"):
+                        na_phrase = ws[i] + ws[i+1]
+                        if ws[i] not in exclude_foods and ws[i+1] not in exclude_foods and na_phrase not in exclude_foods:
+                            na_counter[na_phrase] += 1
+                # 原本的名詞片語擷取
+                if p.startswith("N"):
+                    cur_phrase.append(w)
+                else:
+                    if cur_phrase:
+                        phrase = ''.join(cur_phrase)
+                        # 過濾：只保留非雜訊詞、長度<=6且無空格
+                        if (
+                            phrase not in exclude_nouns
+                            and phrase not in exclude_foods
+                            and len(phrase) <= 6
+                            and ' ' not in phrase
+                        ):
+                            ckip_foods.add(phrase)
+                        cur_phrase = []
+                    # 口味詞
+                    if w in flavor_keywords:
+                        ckip_flavors.add(w)
+            if cur_phrase:
+                phrase = ''.join(cur_phrase)
+                if (
+                    phrase not in exclude_nouns
+                    and phrase not in exclude_foods
+                    and len(phrase) <= 6
+                    and ' ' not in phrase
+                ):
+                    ckip_foods.add(phrase)
+            # 3. 合併 NER 與 CKIP 結果，僅排除 exclude_foods
+            all_candidates = (ner_foods | ckip_foods) - exclude_foods
+            filtered_foods = set()
+            for phrase in all_candidates:
+                # 只要長度<=6且無空格
+                if (
+                    len(phrase) <= 6
+                    and ' ' not in phrase
+                ):
+                    # zero-shot 判斷是否為食物/口味主題
+                    z_result = self.zero_shot(phrase, candidate_labels=candidate_labels)
+                    if z_result['labels'][0] in candidate_labels and z_result['scores'][0] > 0.5:
+                        filtered_foods.add(phrase)
+            for food in filtered_foods:
+                food_counter[food] += 1
+            for flavor in ckip_flavors:
+                flavor_counter[flavor] += 1
+            print(f"偵測到食物：{sorted(filtered_foods)}")
+            print(f"偵測到口味：{sorted(ckip_flavors)}")
 
-            # 只用句號、驚嘆號、問號斷句，保留逗號內部子句
-            sentences = re.split(r'[。！？!？]', content)
-            sentences = [s for s in sentences if s.strip()]
-
-            last_food_noun = None  # 記錄最後找到的食物主題詞
-
-            for sent in sentences:
-                # 先用逗號切分所有子句
-                sub_sentences = re.split(r'[，,]', sent)
-                for sub_sent in sub_sentences:
-                    if not sub_sent.strip():
-                        continue
-                    
-                    # 如果子句以轉折詞開頭，使用上一個子句的食物主題詞
-                    starts_with_turn = False
-                    for turn in turn_words:
-                        if sub_sent.strip().startswith(turn):
-                            starts_with_turn = True
-                            if last_food_noun:  # 使用上一個子句的食物主題詞
-                                turn_clause = sub_sent.replace(turn, "").strip()
-                                ws_turn = self.ws_driver([turn_clause])[0]
-                                pos_turn = self.pos_driver([ws_turn])[0]
-                                noun_candidates_turn = [w for w, p in zip(ws_turn, pos_turn) if p.startswith("N")]
-                                has_food_noun_turn = False
-                                has_other_noun_turn = False
-                                for noun in noun_candidates_turn:
-                                    result = self.zero_shot(noun, candidate_labels=candidate_labels)
-                                    best_label = result['labels'][0]
-                                    score = result['scores'][0]
-                                    if best_label == "食物" and score > 0.5:
-                                        has_food_noun_turn = True
-                                    elif best_label != "食物" and score > 0.5:
-                                        has_other_noun_turn = True
-                                        
-                                # 只有當轉折後子句沒有自己的主題詞時，才將情感歸屬到上一句的食物主題詞
-                                if not has_food_noun_turn and not has_other_noun_turn:
-                                    sent_result = self.sentiment(turn_clause, candidate_labels=sentiment_labels)
-                                    sent_label = sent_result['labels'][0]
-                                    sent_score = sent_result['scores'][0]
-                                    print(f"句子：「{sub_sent}」→ 食物主題詞：{last_food_noun}")
-                                    print(f"    主要情感（以轉折後為主）：{sent_label}（分數：{sent_score:.2f}）")
-                            break
-                            
-                    if starts_with_turn:
-                        continue  # 已處理轉折詞開頭的子句，跳過後續處理
-                        
-                    # 如果子句中間有轉折詞，做特殊處理
-                    if any(w in sub_sent for w in turn_words):
-                        sub_sents = re.split(r'(但是|但|可是|不過)', sub_sent)
-                        if len(sub_sents) > 1:
-                            main_clause = ''.join(sub_sents[:-2]).strip() if len(sub_sents) > 2 else sub_sents[0].strip()
-                            turn_clause = sub_sents[-1].strip()
-                            if not main_clause or not turn_clause:
-                                continue
-                            # 1. 先找主句的食物主題詞
-                            ws_main = self.ws_driver([main_clause])[0]
-                            pos_main = self.pos_driver([ws_main])[0]
-                            noun_candidates_main = [w for w, p in zip(ws_main, pos_main) if p.startswith("N")]
-                            food_noun = None
-                            for noun in noun_candidates_main:
-                                result = self.zero_shot(noun, candidate_labels=candidate_labels)
-                                best_label = result['labels'][0]
-                                score = result['scores'][0]
-                                if best_label == "食物" and score > 0.5:
-                                    food_noun = noun
-                                    last_food_noun = food_noun  # 更新最後找到的食物主題詞
-                                    break
-                            # 2. 再判斷轉折後子句是否有自己的主題詞（如環境）
-                            ws_turn = self.ws_driver([turn_clause])[0]
-                            pos_turn = self.pos_driver([ws_turn])[0]
-                            noun_candidates_turn = [w for w, p in zip(ws_turn, pos_turn) if p.startswith("N")]
-                            has_food_noun_turn = False
-                            has_other_noun_turn = False
-                            for noun in noun_candidates_turn:
-                                result = self.zero_shot(noun, candidate_labels=candidate_labels)
-                                best_label = result['labels'][0]
-                                score = result['scores'][0]
-                                if best_label == "食物" and score > 0.5:
-                                    has_food_noun_turn = True
-                                elif best_label != "食物" and score > 0.5:
-                                    has_other_noun_turn = True
-                            # 3. 只有當轉折後子句沒有自己的主題詞時，才將情感歸屬到前一句的食物主題詞
-                            if food_noun and not has_food_noun_turn and not has_other_noun_turn:
-                                sent_result = self.sentiment(turn_clause, candidate_labels=sentiment_labels)
-                                sent_label = sent_result['labels'][0]
-                                sent_score = sent_result['scores'][0]
-                                print(f"句子：「{sub_sent}」→ 食物主題詞：{food_noun}")
-                                print(f"    主要情感（以轉折後為主）：{sent_label}（分數：{sent_score:.2f}）")
-                        continue  # 這個子句已處理，跳過
-                        
-                    # 沒有轉折詞，正常處理
-                    main_clause = sub_sent.strip()
-                    ws_main = self.ws_driver([main_clause])[0]
-                    pos_main = self.pos_driver([ws_main])[0]
-                    noun_candidates = [w for w, p in zip(ws_main, pos_main) if p.startswith("N")]
-                    food_noun = None
-                    for noun in noun_candidates:
-                        result = self.zero_shot(noun, candidate_labels=candidate_labels)
-                        best_label = result['labels'][0]
-                        score = result['scores'][0]
-                        if best_label == "食物" and score > 0.5:
-                            food_noun = noun
-                            break
-                    if food_noun:
-                        sent_result = self.sentiment(sub_sent, candidate_labels=sentiment_labels)
-                        sent_label = sent_result['labels'][0]
-                        sent_score = sent_result['scores'][0]
-                        print(f"句子：「{sub_sent}」→ 食物主題詞：{food_noun}")
-                        print(f"    主要情感：{sent_label}（分數：{sent_score:.2f}）")
-                        last_food_noun = food_noun  # 更新最後找到的食物主題詞
+        print("\n=== 食物/口味統計 ===")
+        print("食物出現次數：")
+        for food, cnt in food_counter.most_common():
+            print(f"  {food}: {cnt}")
+        print("口味出現次數：")
+        for flavor, cnt in flavor_counter.most_common():
+            print(f"  {flavor}: {cnt}")
+        print("\n名詞+名詞組合（食物種類）統計：")
+        for phrase, cnt in nn_counter.most_common():
+            print(f"  {phrase}: {cnt}")
+        print("三連詞名詞組合：")
+        for phrase, cnt in nnn_counter.most_common():
+            print(f"  {phrase}: {cnt}")
+        print("四連詞名詞組合：")
+        for phrase, cnt in nnnn_counter.most_common():
+            print(f"  {phrase}: {cnt}")
+        print("名詞+形容詞組合（口味描述）統計：")
+        for phrase, cnt in na_counter.most_common():
+            print(f"  {phrase}: {cnt}")
+        # 顯示單一名詞（食物）統計
+        print("\n單一名詞（食物）統計：")
+        # 單一名詞 = 出現在 food_counter 但不在 nn_counter 的詞
+        nn_set = set(nn_counter.keys())
+        for food, cnt in food_counter.most_common():
+            if all(food not in phrase for phrase in nn_set):
+                print(f"  {food}: {cnt}")
 
 if __name__ == "__main__":
     CKIPTransformersTests.setUpClass()
