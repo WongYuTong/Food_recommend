@@ -81,7 +81,7 @@ if __name__ == "__main__":
                         elif "價格" in keyword or "貴" in keyword or "便宜" in keyword or "CP" in keyword:
                             best_label = "價格"
                             score = 1.0
-                        elif any(food in keyword for food in ["小料","湯頭", "口味", "牛排", "拉麵", "冰淇淋", "壽司", "飲料", "霜淇淋"]):
+                        elif any(food in keyword for food in ["小料","湯頭", "口味","飲料"]):
                             best_label = "食物"
                             score = 1.0
                         elif any(env in keyword for env in ["樓上", "風景", "裝潢", "氣氛", "環境", "地點", "位置", "空間"]):
