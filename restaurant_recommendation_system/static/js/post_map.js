@@ -92,8 +92,8 @@ function placeDetails(placeId) {
                 // 設定表單欄位（請依你的 input id 調整）
                 const nameInput = document.getElementById("location-name");
                 const addressInput = document.getElementById("location-address");
-                const latInput = document.getElementById("location-lat");
-                const lngInput = document.getElementById("location-lng");
+                const latInput = document.getElementById("location_lat");
+                const lngInput = document.getElementById("location_lng");
                 const placeIdInput = document.getElementById("id_location_place_id");
                 const searchInput = document.getElementById("location-search");
                 if (nameInput) nameInput.value = place.name || "";
