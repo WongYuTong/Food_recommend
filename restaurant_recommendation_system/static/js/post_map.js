@@ -36,7 +36,7 @@ function initMap() {
         const addressInput = document.getElementById("location-address");
         const latInput = document.getElementById("location-lat");
         const lngInput = document.getElementById("location-lng");
-        const placeIdInput = document.getElementById("location-place-id");
+        const placeIdInput = document.getElementById("id_location_place_id");
         if (nameInput) nameInput.value = place.name || "";
         if (addressInput) addressInput.value = place.formatted_address || "";
         if (latInput) latInput.value = place.geometry.location.lat();
@@ -94,7 +94,7 @@ function placeDetails(placeId) {
                 const addressInput = document.getElementById("location-address");
                 const latInput = document.getElementById("location-lat");
                 const lngInput = document.getElementById("location-lng");
-                const placeIdInput = document.getElementById("location-place-id");
+                const placeIdInput = document.getElementById("id_location_place_id");
                 const searchInput = document.getElementById("location-search");
                 if (nameInput) nameInput.value = place.name || "";
                 if (addressInput) addressInput.value = place.formatted_address || "";
