@@ -103,6 +103,37 @@ canvas {
     font-size: 2rem;       /* 可依需求調整字體大小 */
 }
 
+/* 可加在 user_meal_dashboard.css */
+.nav-pills .nav-link.active {
+    background-color: #1a237e;
+    color: #fff;
+    font-weight: bold;
+}
+.nav-pills .nav-link {
+    color: #334155;
+    background: #f3f6fa;
+    border-radius: 6px;
+    margin-right: 6px;
+    font-weight: 500;
+    font-size: 0.98rem;
+    padding: 0.35em 1em;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    border: none;
+    outline: none;
+    /* 預設平面或微凸 */
+    box-shadow: 1px 1.5px 4px #e0e3e8, -1px -1.5px 4px #ffffff;
+}
+
+.nav-pills .nav-link.active, 
+.nav-pills .nav-link:focus, 
+.nav-pills .nav-link:hover {
+    background: #e3e6ea;
+    color: #334155;
+    font-weight: 700;
+    /* active 狀態為凹陷效果 */
+    box-shadow: inset 2px 2px 6px #d1d5db, inset -2px -2px 6px #fff;
+}
+
 #taiwanMap {
     height: 70vh;        /* 原本60vh，改38vh */
     min-height: 70vh;   /* 視需要可再調整 */
