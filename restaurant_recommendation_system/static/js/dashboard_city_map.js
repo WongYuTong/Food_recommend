@@ -6,12 +6,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     var cityStats = JSON.parse(document.getElementById('city-stats-data').textContent);
     var cityPosts = JSON.parse(document.getElementById('city-posts-data').textContent);
-    // 新增：取得用餐記錄資料
-    var cityRecords = {};
-    var cityRecordsScript = document.getElementById('city-records-data');
-    if (cityRecordsScript) {
-        cityRecords = JSON.parse(cityRecordsScript.textContent);
-    }
     var geojsonUrl = document.getElementById('taiwanMap').dataset.geojsonUrl;
 
     function getColor(d) {
@@ -22,8 +16,36 @@ document.addEventListener("DOMContentLoaded", function() {
                         '#ccece6';
     }
 
+    // 切換分頁顯示
+    function switchTab(tab) {
+        const cityListBtn = document.getElementById('showCityListBtn');
+        const cityPostsBtn = document.getElementById('showCityPostsBtn');
+        const cityListBlock = document.getElementById('cityListBlock');
+        const cityPostsBlock = document.getElementById('cityPostsBlock');
+        if (tab === 'list') {
+            cityListBtn.classList.add('active');
+            cityPostsBtn.classList.remove('active');
+            cityListBlock.style.display = '';
+            cityPostsBlock.style.display = 'none';
+        } else {
+            cityListBtn.classList.remove('active');
+            cityPostsBtn.classList.add('active');
+            cityListBlock.style.display = 'none';
+            cityPostsBlock.style.display = '';
+        }
+    }
+
+    // 綁定分頁按鈕
+    document.getElementById('showCityListBtn').onclick = function() {
+        switchTab('list');
+    };
+    document.getElementById('showCityPostsBtn').onclick = function() {
+        switchTab('posts');
+    };
+
     function showCityPosts(city) {
-        console.log('showCityPosts:', city, cityPosts[city]);
+        // 切換到貼文記錄分頁
+        switchTab('posts');
         var posts = cityPosts[city] || [];
         var container = document.getElementById('cityPosts');
         var postsHtml = '';
@@ -57,7 +79,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 var count = cityStats[name] || 0;
                 layer.bindPopup(name + "：" + count + " 筆");
                 layer.on('click', function() {
-                    console.log('點擊地圖縣市:', name);
                     showCityPosts(name);
                     layer.openPopup();
                 });
@@ -65,11 +86,14 @@ document.addEventListener("DOMContentLoaded", function() {
         }).addTo(map);
     });
 
-    // 點選清單也能顯示貼文與用餐記錄
+    // 點選清單也能顯示貼文記錄
     document.querySelectorAll('.city-list-item').forEach(function(item) {
         item.addEventListener('click', function() {
             var city = this.dataset.city;
             showCityPosts(city);
         });
     });
+
+    // 預設顯示縣市列表
+    switchTab('list');
 });
