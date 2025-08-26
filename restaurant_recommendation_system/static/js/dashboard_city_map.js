@@ -4,13 +4,16 @@ document.addEventListener("DOMContentLoaded", function() {
         attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // 取得縣市統計資料
     var cityStats = JSON.parse(document.getElementById('city-stats-data').textContent);
-
-    // 取得 GeoJSON 路徑
+    var cityPosts = JSON.parse(document.getElementById('city-posts-data').textContent);
+    // 新增：取得用餐記錄資料
+    var cityRecords = {};
+    var cityRecordsScript = document.getElementById('city-records-data');
+    if (cityRecordsScript) {
+        cityRecords = JSON.parse(cityRecordsScript.textContent);
+    }
     var geojsonUrl = document.getElementById('taiwanMap').dataset.geojsonUrl;
 
-    // 設定漸層顏色
     function getColor(d) {
         return d > 20 ? '#00441b' :
                d > 10 ? '#238b45' :
@@ -19,7 +22,21 @@ document.addEventListener("DOMContentLoaded", function() {
                         '#ccece6';
     }
 
-    // 載入台灣縣市GeoJSON
+    function showCityPosts(city) {
+        console.log('showCityPosts:', city, cityPosts[city]);
+        var posts = cityPosts[city] || [];
+        var container = document.getElementById('cityPosts');
+        var postsHtml = '';
+        if (posts.length === 0) {
+            postsHtml = `<div class="text-muted">尚無貼文</div>`;
+        } else {
+            postsHtml = `<h6 class="mb-2">${city} 貼文：</h6><ul class="list-group mb-2">` +
+                posts.map(p => `<li class="list-group-item">${p}</li>`).join('') +
+                `</ul>`;
+        }
+        container.innerHTML = postsHtml;
+    }
+
     fetch(geojsonUrl)
     .then(response => response.json())
     .then(geojsonData => {
@@ -39,7 +56,20 @@ document.addEventListener("DOMContentLoaded", function() {
                 var name = feature.properties.COUNTYNAME;
                 var count = cityStats[name] || 0;
                 layer.bindPopup(name + "：" + count + " 筆");
+                layer.on('click', function() {
+                    console.log('點擊地圖縣市:', name);
+                    showCityPosts(name);
+                    layer.openPopup();
+                });
             }
         }).addTo(map);
+    });
+
+    // 點選清單也能顯示貼文與用餐記錄
+    document.querySelectorAll('.city-list-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+            var city = this.dataset.city;
+            showCityPosts(city);
+        });
     });
 });
