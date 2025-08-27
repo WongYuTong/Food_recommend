@@ -1,46 +1,109 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+# === 📦 imports ===
+
+# 標準庫
 import json
 import re
 import random
 
+# Django
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
+# DRF
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 
-# 功能 1：反向推薦條件擷取（優化後最終版）
+# 本地 utils（共用邏輯）
+from .utils_card import (
+    generate_map_url,
+    format_open_status,
+    extract_district,
+    generate_price_description,
+    generate_recommend_reason
+)
+
+
+# 功能 1：反向推薦條件擷取（最終強化版 v3）
 class ExtractNegativeConditionsView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        user_input = request.data.get('text', '')
+        req_type = request.data.get('type')
+        user_input = request.data.get('text', '').strip()
 
-       # ✅ 支援更多前綴詞（我、不過、可能…）
-        prefix_variants = r'(?:我|不過|那就|可能)?'
-        negative_verbs = r'(不想吃|不想要|不要|不吃|別推薦|不要推薦)'
+        if req_type != 'text' or not user_input:
+            return Response({
+                "status": "error",
+                "data": None,
+                "message": "請提供 type='text' 且包含 text 欄位"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 🔍 組合成彈性正則：抓出否定語句
-        pattern = rf'{prefix_variants}{negative_verbs}(.+?)(?:[，。!！,\.]|$)'
+        # 否定語句樣式（✅ 已擴充）
+        prefix = r'(?:我|不過|那就|可能)?'
+        negative_verbs = r'(不想吃|不想要|不要|不吃|別推薦|不要推薦|不太想吃|沒有很喜歡|那種我不愛|不會選|不太喜歡|不喜歡|不愛|我不會選)'
+        pattern = rf'{prefix}{negative_verbs}(.+?)(?:[，。!！,\.]|$)'
 
         matches = re.findall(pattern, user_input)
+
+        # 功能詞前綴（剃除）
+        FUNCTION_PREFIXES = ['推薦', '餐廳', '地方', '那家', '這家', '店家', '吃', '想吃', '提供']
+
+        # 結尾語助詞（✅ 已擴充）
+        TAIL_PARTICLES = r'[的了呢啦啊嘛唷喔哦耶呀囉吧]*$'
+
+        # 保留詞（完整詞不能拆）
+        PRESERVE_TERMS = ['吃到飽', '早午餐', '宵夜', '套餐', '內用', '外帶']
+
+        # 結尾修飾詞（自動刪除）
+        CLEAN_SUFFIXES = ['的料理', '料理', '店家', '餐廳', '類型', '類', '那家', '這家', '店']
+
         excluded_items = []
 
         for match in matches:
-            # 若 match 是 tuple（前綴 + 動詞 + 內容），我們只取內容
-            content = match[1] if isinstance(match, tuple) else match
-            split_items = re.split(r'[,、，和跟以及或還有\s]+', content)
-            excluded_items.extend([item.strip() for item in split_items if item.strip()])
+            phrase = match[1] if isinstance(match, tuple) and len(match) > 1 else match[0] if isinstance(match, tuple) else match
+            split_words = re.split(r'[,、，和跟以及或還有\s]+', phrase)
 
-        # 去除重複並排序（方便測試與展示）
+            for word in split_words:
+                word = word.strip()
+
+                # ✅ 若為保留詞或「保留詞+的」，直接保留
+                if word in PRESERVE_TERMS:
+                    cleaned = word
+                elif word.endswith("的") and word[:-1] in PRESERVE_TERMS:
+                    cleaned = word[:-1]
+                else:
+                    # 去除功能詞前綴
+                    for prefix_word in FUNCTION_PREFIXES:
+                        if word.startswith(prefix_word):
+                            word = word[len(prefix_word):]
+                            break
+
+                    # 去除語尾助詞
+                    word = re.sub(TAIL_PARTICLES, '', word)
+
+                    # 去除結尾修飾詞（像是「甜點店」→「甜點」）
+                    for suffix in CLEAN_SUFFIXES:
+                        if word.endswith(suffix) and len(word) > len(suffix):
+                            word = word[:-len(suffix)]
+                            break
+
+                    cleaned = word
+
+                if cleaned:
+                    excluded_items.append(cleaned)
+
         unique_excluded = sorted(set(excluded_items))
 
-        # ✅ 可選功能：只保留已知分類（未來整合資料庫或tag列表時可開啟）
-        # known_categories = {"火鍋", "甜點", "壽司", "牛排", "燒烤", "義大利麵", "拉麵", "飲料"}
-        # unique_excluded = [item for item in unique_excluded if item in known_categories]
+        return Response({
+            "status": "success",
+            "data": {
+                "excluded": unique_excluded
+            },
+            "message": "已擷取反向推薦條件"
+        }, status=status.HTTP_200_OK)
 
-        return Response({'excluded': unique_excluded})
 
 # 功能 2：推薦理由補強 + 結構化輸出（優化版）
 class GenerateRecommendReasonView(APIView):
