@@ -319,105 +319,122 @@ class SuggestInputGuidanceView(APIView):
 
 
 
-# 功能 4：推薦卡片欄位模擬輸出（進階版）
+# 功能 4：推薦卡片欄位模擬輸出(強化版)
+
 class GenerateCardDataView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        restaurants = request.data.get("restaurants", [])
+        req_type = request.data.get('type')
+        restaurants = request.data.get('restaurants', [])
+
+        if req_type != 'restaurant_list' or not isinstance(restaurants, list):
+            return Response({
+                "status": "error",
+                "data": None,
+                "message": "請提供 type='restaurant_list' 且包含 restaurants 清單"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         results = []
 
-        for r in restaurants:
-            name = r.get("name", "")
-            rating = r.get("rating", 0)
-            address = r.get("address", "")
+        for restaurant in restaurants:
+            name = restaurant.get('name', '')
+            rating = restaurant.get('rating', 0)
+            address = restaurant.get('address', '')
+            price_level = restaurant.get('price_level', '')
+            review_count = restaurant.get('review_count', 0)
+            is_open_raw = restaurant.get('is_open', None)
+            matched_tags = restaurant.get('matched_tags', [])
+            ai_reason = restaurant.get('ai_reason', '')
+            highlight = restaurant.get('highlight', '')
+            distance_m = restaurant.get('distance_m', random.randint(100, 2000))
+            distance = f"{distance_m} 公尺"
 
-            # --- 模擬欄位 ---
-            review_count = random.randint(50, 500)
-            price_level_num = random.choice([1, 2, 3])
-            is_open = random.choice([True, False])
-            distance_m = random.randint(300, 1200)
-            opening_hours = f"{random.choice(['10:00', '11:00'])} - {random.choice(['20:00', '21:00', '22:00'])}"
+            # 共用處理邏輯
+            map_url = generate_map_url(name)
+            is_open = format_open_status(is_open_raw)
+            district = extract_district(address)
+            price_desc = generate_price_description(price_level)
 
-            # --- 標籤 ---
-            tags = []
-            if "燒肉" in name or "燒肉" in address:
-                tags.append("燒肉")
-            if "甜" in name or "甜點" in name:
-                tags.append("甜點")
-            if "素" in name:
-                tags.append("素食")
-            if "漢堡" in name:
-                tags.append("漢堡")
-            if "拉麵" in name or "拉麵" in address:
-                tags.append("拉麵")
-            if "咖啡" in name or "咖啡廳" in name:
-                tags.append("咖啡廳")
-            if "牛肉" in name:
-                tags.append("牛肉")
+            # 組合 tags
+            tags = list(set(matched_tags + ([district] if district else []) + ([price_desc] if price_desc else [])))
 
-            # 地區標籤
-            district_match = re.search(r"(台北市|新北市|台中市|桃園市)?([^\d\s區]+區)", address)
-            if district_match:
-                tags.append(district_match.group(2))
+            # highlight 補強
+            if not highlight:
+                if "甜點" in tags or "蛋糕" in name:
+                    highlight = "甜點評價高"
+                elif rating >= 4.5:
+                    highlight = "評價優良"
+                elif district and name not in ["泰式小館"]:
+                    highlight = "地點便利"
+                else:
+                    highlight = ""
 
-            if rating >= 4.5:
-                tags.append("高評價")
 
-            # --- 亮點 ---
-            if "甜點" in tags:
-                highlight = "甜點評價高"
-            elif rating >= 4.5:
-                highlight = "Google 評價 4.5 分以上"
-            else:
-                highlight = "地點便利"
+            # 推薦理由
+            recommend_reason = generate_recommend_reason(matched_tags, highlight, district, price_desc)
 
-            # --- 推薦理由 ---
-            reason = "、".join(tags + [highlight])
-
-            # --- 額外欄位 ---
+            # 模擬 features（邏輯擴充）
             features = []
             if "素食" in tags:
-                features.append("蔬食友善")
-            if price_level_num == 1:
-                features.append("平價實惠")
-            elif price_level_num == 3:
-                features.append("高端體驗")
-            if review_count > 300:
-                features.append("人氣店家")
+                features.append("提供素食")
+            if price_desc == "價格實惠":
+                features.append("高 CP 值")
+            if "甜點" in tags or "蛋糕" in name:
+                features.append("甜點專門")
+            if rating >= 4.5 and review_count >= 300:
+                features.append("人氣餐廳")
+            if price_level == "$":
+                features.append("價格便宜")
+            if "異國料理" in tags or "泰式" in name:
+                features.append("異國料理")
 
-            # --- 樣式分類（多重判斷）---
-            style = []
-            if "咖啡廳" in tags or "甜點" in tags:
-                style.append("文青")
-            if "燒肉" in tags or "漢堡" in tags:
-                style.append("美式")
-            if "拉麵" in tags:
-                style.append("日式")
-            if "牛肉" in tags or "傳統" in name:
-                style.append("傳統")
-            if "宵夜" in name or "晚上" in opening_hours:
-                style.append("夜貓族")
+            # 模擬 style（先處理夜貓，再看其他）
+            style = ""
+            if "泰式" in name or "東南亞" in tags:
+                style = "東南亞風"
+            elif "夜貓族" in tags or "夜貓" in name or "宵夜" in tags or distance_m > 1500:
+                style = "夜貓族"
+            elif "文青" in name or "咖啡" in name or "甜點" in tags:
+                style = "文青"
+            elif "燒肉" in name or "烤肉" in tags:
+                style = "美式"
+            elif "壽司" in name or "日式" in tags or "拉麵" in name:
+                style = "日式"
 
-            result = {
+
+
+            # 模擬營業時間與預留欄位
+            opening_hours = "11:00 - 21:00"
+            has_coupon = False
+            image_url = ""
+
+            results.append({
                 "name": name,
                 "rating": rating,
                 "address": address,
                 "tags": tags,
                 "highlight": highlight,
-                "distance": f"{distance_m} 公尺",
+                "distance": distance,
                 "distance_m": distance_m,
-                "reason": reason,
                 "review_count": review_count,
-                "price_level": "$" * price_level_num,
+                "price_level": price_level,
                 "is_open": is_open,
-                "opening_hours": opening_hours,
-                "map_url": f"https://www.google.com/maps/search/{name}",
+                "map_url": map_url,
                 "features": features,
                 "style": style,
-            }
-            results.append(result)
+                "opening_hours": opening_hours,
+                "recommend_reason": recommend_reason,
+                "has_coupon": has_coupon,
+                "image_url": image_url
+            })
 
-        return Response({"results": results})
+        return Response({
+            "status": "success",
+            "data": {
+                "results": results
+            },
+            "message": "卡片欄位資料已產生"
+        }, status=status.HTTP_200_OK)
 
 
