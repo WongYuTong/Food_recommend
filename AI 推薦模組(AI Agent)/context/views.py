@@ -70,7 +70,7 @@ def recommend_restaurant(request):
             prefs_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user)
             for pref in prefs_qs:
                 mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
-                user_preferences.setdefault(mapped_type, []).append(pref.keyword)
+                user_preferences[mapped_type].append(pref.keyword)
 
             # 建立偏好訊息
             like_list = parsed_preferences.get("喜歡", [])
@@ -204,26 +204,43 @@ def get_user_preference(request):
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
-# ---------------- 刪除使用者偏好項目 ----------------
+# ---------------- 刪除使用者偏好項目（自動解析使用者語句） ----------------
 @csrf_exempt
 @require_POST
 def delete_user_preference_item(request):
     try:
         data = json.loads(request.body)
         user_id = data.get("user_id")
-        item_to_delete = data.get("item")
+        sentence = data.get("sentence")  # 前端傳整句話，例如 "我不要牛肉"
 
-        if not user_id or not item_to_delete:
-            return JsonResponse({"status": "error", "message": "缺少 user_id 或 item"}, status=400)
+        if not user_id or not sentence:
+            return JsonResponse({"status": "error", "message": "缺少 user_id 或 sentence"}, status=400)
         if not User.objects.filter(id=user_id).exists():
             return JsonResponse({"status": "error", "message": "使用者不存在"}, status=404)
 
         user = User.objects.get(id=user_id)
-        deleted_count, _ = UserPreference.objects.using(DB_ALIAS).filter(user=user, keyword=item_to_delete).delete()
-        if deleted_count == 0:
-            return JsonResponse({"status": "error", "message": f"{item_to_delete} 不存在於偏好資料中"}, status=404)
+        deleted_items = []
+        not_found_items = []
 
-        return JsonResponse({"status": "success", "message": f"已成功刪除偏好項目：{item_to_delete}"})
+        # 自動解析使用者語句中的刪除偏好
+        for delete_kw in DELETE_KEYWORDS:
+            matches = re.findall(f"{delete_kw}([^\s，；]+)", sentence)
+            for item in matches:
+                pref_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user, keyword=item)
+                if pref_qs.exists():
+                    pref_qs.delete()
+                    deleted_items.append(item)
+                else:
+                    not_found_items.append(item)
+
+        # 回傳刪除結果訊息
+        if deleted_items:
+            message = f"已成功刪除偏好：{'、'.join(deleted_items)}"
+            if not_found_items:
+                message += f"；未找到偏好：{'、'.join(not_found_items)}"
+            return JsonResponse({"status": "success", "message": message})
+
+        return JsonResponse({"status": "error", "message": "未偵測到要刪除的偏好項目"}, status=404)
 
     except Exception as e:
         print(f"刪除使用者偏好錯誤：{str(e)}")
