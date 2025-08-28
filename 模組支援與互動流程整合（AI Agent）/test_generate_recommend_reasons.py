@@ -1,117 +1,77 @@
+import sys
+import os
 import requests
-import json
-from termcolor import colored  # 若未安裝請執行：pip install termcolor
+from termcolor import colored
 
-url = "http://localhost:8000/agent/generate_recommend_reasons/"
+# ✅ 匯入 sample data
+sys.path.append(os.path.join(os.path.dirname(__file__), 'agent_module'))
+from sample_data import RESTAURANTS_SAMPLE
 
-test_data = [
-    {
-        "input": {
-            "name": "這一小鍋 台北車站店",
-            "rating": 4.8,
-            "address": "台北市中正區忠孝西路",
-            "is_open": True,
-            "ai_reason": "",
-            "comment_summary": "",
-            "highlight": "甜點評價高",
-            "matched_tags": ["火鍋", "高評價"],
-            "distance": "400 公尺",
-            "reason_score": 0.92,
-            "price_level": "$$",
-            "review_count": 302
-        },
-        "expected_keywords": ["甜點評價高", "火鍋", "高評價", "價格中等", "位於中正區"]
-    },
-    {
-        "input": {
-            "name": "某某燒肉店",
-            "rating": 4.2,
-            "address": "台北市信義區松壽路",
-            "is_open": False,
-            "ai_reason": "",
-            "comment_summary": "氣氛佳、座位舒適",
-            "highlight": "",
-            "matched_tags": ["燒肉"],
-            "distance": "800 公尺",
-            "reason_score": 0.75,
-            "price_level": "$$$",
-            "review_count": 189
-        },
-        "expected_keywords": ["氣氛佳", "燒肉", "偏高價位", "位於信義區"]
-    },
-    {
-        "input": {
-            "name": "平價小吃店",
-            "rating": 3.8,
-            "address": "新北市板橋區文化路",
-            "is_open": True,
-            "ai_reason": "",
-            "comment_summary": "",
-            "highlight": "",
-            "matched_tags": [],
-            "distance": "600 公尺",
-            "reason_score": None,
-            "price_level": "$",
-            "review_count": 88
-        },
-        "expected_keywords": ["整體評價不錯", "價格實惠", "位於板橋區"]
-    }
-]
+# ✅ API URL
+API_URL = "http://localhost:8000/agent/generate_recommend_reasons/"
 
-expected_keys = [
-    "name", "recommend_reason", "highlight", "tags",
-    "price_level", "review_count", "is_open",
-    "map_url", "distance", "reason_score", "reason_summary"
-]
+# ✅ 預期關鍵詞（已加入補強後的詞彙）
+EXPECTED_KEYWORDS = {
+    "小確幸甜點店": {"甜點", "大安區", "甜點評價高", "價格實惠", "高評價", "文青風格"},
+    "阿牛燒肉": {"燒肉", "板橋區", "份量大", "適合聚餐", "偏高價位", "美式風格"},
+    "拉麵一郎": {"拉麵", "中山區", "人氣拉麵名店", "價格中等", "日式風格", "熱門店家"},
+    "夜貓咖啡屋": {"咖啡", "信義區", "氣氛佳", "夜間營業", "夜貓族", "適合宵夜"},
+    "泰式小館": {"萬華區", "價格實惠", "異國風味", "東南亞風格", "地點方便"}
+}
 
-print(colored("📡 正在發送 POST 請求...", "cyan"))
-response = requests.post(url, json={"restaurants": [t["input"] for t in test_data]})
-print(colored(f"📥 狀態碼: {response.status_code}", "cyan"))
-
-if response.status_code != 200:
-    print(colored("❌ API 請求失敗", "red"))
-    exit()
-
-results = response.json().get("results", [])
-success_count = 0
+total = len(RESTAURANTS_SAMPLE)
+success = 0
 failures = []
 
-print(colored("\n🎯 開始比對結果...\n", "blue"))
+print(colored("🎯 測試結果", "cyan", attrs=["bold"]))
 
-for i, (res, test) in enumerate(zip(results, test_data), 1):
-    name = res.get("name", f"第{i}筆資料")
-    print(colored(f"🧪 測試 {i}: {name}", "yellow"))
+for i, restaurant in enumerate(RESTAURANTS_SAMPLE, start=1):
+    response = requests.post(API_URL, json={
+        "type": "restaurant_list",
+        "restaurants": [restaurant]
+    })
 
-    missing_keys = [k for k in expected_keys if k not in res]
-    missing_keywords = [kw for kw in test["expected_keywords"] if kw not in res.get("recommend_reason", "")]
+    if response.status_code != 200:
+        print(colored(f"❌ {restaurant['name']} 測試失敗（狀態碼 {response.status_code}）", "red"))
+        failures.append(restaurant['name'])
+        continue
 
-    if not missing_keys and not missing_keywords:
-        print(colored("✅ 通過", "green"))
-        success_count += 1
+    result = response.json()
+    results = result.get("data", {}).get("results", [])
+    if not results:
+        print(colored(f"❌ {restaurant['name']} 測試失敗（無回傳資料）", "red"))
+        failures.append(restaurant['name'])
+        continue
+
+    r = results[0]
+    name = r.get("name", "")
+    reason = r.get("recommend_reason", "")
+    is_open = r.get("is_open", "")
+
+    expected_keywords = EXPECTED_KEYWORDS.get(name, set())
+
+    # ✅ 核心比對
+    reason_pass = all(k in reason for k in expected_keywords)
+    is_open_pass = isinstance(is_open, str)
+    all_pass = reason_pass and is_open_pass
+
+    if all_pass:
+        success += 1
+        print(colored(f"✅ {name} 測試通過", "green"))
     else:
-        print(colored("❌ 失敗", "red"))
-        if missing_keys:
-            print(colored("  ⛔ 缺少欄位: ", "red"), missing_keys)
-        if missing_keywords:
-            print(colored("  ⛔ 推薦理由缺少關鍵字: ", "red"), missing_keywords)
-        failures.append({
-            "name": name,
-            "missing_keys": missing_keys,
-            "missing_keywords": missing_keywords
-        })
+        print(colored(f"❌ {name} 測試失敗", "red"))
+        if not reason_pass:
+            missing = [k for k in expected_keywords if k not in reason]
+            print(colored(f"  ❌ recommend_reason 缺少：{missing}", "yellow"))
+            print(colored(f"     ▶ 實際：{reason}", "blue"))
+        if not is_open_pass:
+            print(colored(f"  ❌ is_open 格式錯誤 ▶ 實際：{is_open}", "yellow"))
+        failures.append(name)
 
-    print("-" * 40)
-
-# 測試總結
-print(colored("\n📊 測試總結", "blue"))
-print(colored(f"✔️ 通過數量：{success_count}", "green"))
-print(colored(f"❌ 失敗數量：{len(results) - success_count}", "red"))
-
+# 📊 統整結果
+print(colored("\n📊 測試總結", "cyan", attrs=["bold"]))
+print(f"通過：{success}/{total}")
 if failures:
-    print(colored("\n📌 詳細失敗原因：", "magenta"))
-    for fail in failures:
-        print(colored(f"- {fail['name']}", "red"))
-        if fail["missing_keys"]:
-            print("  缺少欄位:", fail["missing_keys"])
-        if fail["missing_keywords"]:
-            print("  推薦理由缺少關鍵詞:", fail["missing_keywords"])
+    print(colored("❌ 失敗項目：", "red"), ", ".join(failures))
+else:
+    print(colored("🎉 全部通過！", "green", attrs=["bold"]))

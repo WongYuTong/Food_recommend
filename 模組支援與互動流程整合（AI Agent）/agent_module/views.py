@@ -105,12 +105,21 @@ class ExtractNegativeConditionsView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-# 功能 2：推薦理由補強 + 結構化輸出（優化版）
+# 功能 2：推薦理由補強 + 結構化輸出（強化版）
 class GenerateRecommendReasonView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        req_type = request.data.get('type')
         restaurants = request.data.get('restaurants', [])
+
+        if req_type != 'restaurant_list' or not isinstance(restaurants, list):
+            return Response({
+                "status": "error",
+                "data": None,
+                "message": "請提供 type='restaurant_list' 且包含 restaurants 清單"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         results = []
 
         for restaurant in restaurants:
@@ -122,23 +131,19 @@ class GenerateRecommendReasonView(APIView):
             comment_summary = restaurant.get('comment_summary', '')
             highlight = restaurant.get('highlight', '')
             matched_tags = restaurant.get('matched_tags', [])
-            distance = restaurant.get('distance', '未知')
+            distance_m = restaurant.get('distance_m', None)
+            distance = f"{distance_m} 公尺" if distance_m else "未知"
             reason_score = restaurant.get('reason_score', 0)
             price_level = restaurant.get('price_level', '')
             review_count = restaurant.get('review_count', None)
 
-            # 建立地圖搜尋連結
-            map_url = f"https://www.google.com/maps/search/{name}"
+            # 共用欄位處理
+            map_url = generate_map_url(name)
+            is_open = format_open_status(is_open_raw)
+            price_desc = generate_price_description(price_level)
+            district = extract_district(address)
 
-            # 1. 營業狀態轉文字
-            if isinstance(is_open_raw, bool):
-                is_open = "營業中" if is_open_raw else "休息中"
-            elif isinstance(is_open_raw, str):
-                is_open = is_open_raw
-            else:
-                is_open = "無資料"
-
-            # 2. 主理由來源與內容
+            # 主推薦理由來源
             reason_source = "inference"
             if ai_reason:
                 core_reason = ai_reason
@@ -150,41 +155,70 @@ class GenerateRecommendReasonView(APIView):
                 core_reasons = []
                 if rating >= 4.5:
                     core_reasons.append("評價很高")
-                if "台北" in address:
+                if "台北" in address or "新北" in address:
                     core_reasons.append("地點方便")
                 if not core_reasons:
                     core_reasons.append("整體評價不錯")
                 core_reason = "、".join(core_reasons)
 
-            # 3. 補強 extra
+            # 補強理由：基本
             extra_reasons = []
             if highlight:
                 extra_reasons.append(highlight)
             if matched_tags:
                 extra_reasons.extend(matched_tags)
-
-            # 價格補強
-            price_desc = {
-                "$": "價格實惠",
-                "$$": "價格中等",
-                "$$$": "偏高價位"
-            }.get(price_level)
             if price_desc:
                 extra_reasons.append(price_desc)
+            if district:
+                extra_reasons.append(f"位於{district}")
 
-            # 區域補強（地址擷取）
-            district_match = re.search(r'(台北市|新北市)?(\w{2,3}區)', address)
-            if district_match:
-                extra_reasons.append(f"位於{district_match.group(2)}")
+            # 🔍 補強理由：features / style / opening_hours
+            features = restaurant.get("features", [])
+            style = restaurant.get("style", "")
+            opening_hours = restaurant.get("opening_hours", "")
 
-            # 4. 結構化理由
+            # ➕ features 補強
+            feature_keywords_map = {
+                "甜點專門": "甜點評價高",
+                "氣氛佳": "氣氛佳",
+                "聚餐推薦": "適合聚餐",
+                "高 CP 值": "高 CP 值",
+                "價格便宜": "價格實惠",
+                "價格親民": "價格實惠",
+                "人氣餐廳": "熱門店家",
+                "宵夜好選擇": "適合宵夜",
+                "異國料理": "異國風味"
+            }
+            for f in features:
+                if f in feature_keywords_map:
+                    extra_reasons.append(feature_keywords_map[f])
+
+            # ➕ style 補強
+            style_keywords_map = {
+                "文青": "文青風格",
+                "美式": "美式風格",
+                "日式": "日式風格",
+                "夜貓族": "適合夜貓子",
+                "東南亞風": "東南亞風格"
+            }
+            if style in style_keywords_map:
+                extra_reasons.append(style_keywords_map[style])
+
+            # ➕ opening_hours 補強
+            if opening_hours:
+                if "00" in opening_hours or "02" in opening_hours:
+                    extra_reasons.append("夜間營業")
+                if "23" in opening_hours or "22" in opening_hours:
+                    extra_reasons.append("適合宵夜")
+                if "全天" in opening_hours:
+                    extra_reasons.append("全天營業")
+
+            # 結構化推薦理由
             reason_summary = {
                 "source": reason_source,
                 "core": core_reason,
                 "extra": extra_reasons
             }
-
-            # 5. 合併成單行說明
             full_reason = "、".join([core_reason] + extra_reasons)
 
             results.append({
@@ -194,6 +228,7 @@ class GenerateRecommendReasonView(APIView):
                 "price_level": price_level,
                 "review_count": review_count,
                 "highlight": highlight,
+                "tags": list(set(matched_tags + extra_reasons)),
                 "matched_tags": matched_tags,
                 "is_open": is_open,
                 "distance": distance,
@@ -203,15 +238,20 @@ class GenerateRecommendReasonView(APIView):
                 "recommend_reason": full_reason
             })
 
-        # 排序：先用 reason_score，其次 rating，再來 review_count
+        # 排序（推薦分數 > 評價 > 評論數）
         sorted_results = sorted(results, key=lambda x: (
-            x.get('reason_score') if x.get('reason_score') is not None else 0,
-            x.get('rating') if x.get('rating') is not None else 0,
-            x.get('review_count') if x.get('review_count') is not None else 0
+            x.get('reason_score') or 0,
+            x.get('rating') or 0,
+            x.get('review_count') or 0
         ), reverse=True)
 
-        return Response({"results": sorted_results})
-
+        return Response({
+            "status": "success",
+            "data": {
+                "results": sorted_results
+            },
+            "message": "推薦理由已產生"
+        }, status=status.HTTP_200_OK)
 
 # 功能 3：模糊語句提示（進階優化版）
 class GeneratePromptView(APIView):
