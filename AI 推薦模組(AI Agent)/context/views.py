@@ -33,12 +33,15 @@ def recommend_restaurant(request):
         user_location = data.get("location", {})
         user_id = data.get("user_id")
 
+        # 取得時段與上下文
         context_info = get_current_context_info()
-        detected_emotions = parse_emotion_from_text(user_message)
-        user_preferences = {"喜歡": [], "不喜歡": []}
-        preference_msg = ""
+        meal_time = context_info.get("meal_time", "午餐")
 
-        # 取得現有偏好
+        # 偵測情緒
+        detected_emotions = parse_emotion_from_text(user_message)
+
+        # 取得使用者偏好
+        user_preferences = {"喜歡": [], "不喜歡": []}
         if user_id and User.objects.filter(id=user_id).exists():
             user = User.objects.get(id=user_id)
             prefs_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user)
@@ -46,7 +49,7 @@ def recommend_restaurant(request):
                 mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
                 user_preferences.setdefault(mapped_type, []).append(pref.keyword)
 
-        # 分析新的偏好
+        # 分析新的偏好並更新
         parsed_preferences = parse_preference_from_text(user_message)
         if parsed_preferences and parsed_preferences != ["無特別偏好"] and user_id and User.objects.filter(id=user_id).exists():
             user = User.objects.get(id=user_id)
@@ -56,11 +59,7 @@ def recommend_restaurant(request):
                         user=user,
                         keyword=keyword,
                         preference_type=reverse_mapping[category],
-                        defaults={
-                            "weight": 1.0,
-                            "frequency": 1,
-                            "source": "dialog",
-                        }
+                        defaults={"weight": 1.0, "frequency": 1, "source": "dialog"}
                     )
                     if not created:
                         pref_obj.update_preference(boost=1.0, using_db=DB_ALIAS)
@@ -72,44 +71,25 @@ def recommend_restaurant(request):
                 mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
                 user_preferences[mapped_type].append(pref.keyword)
 
-            # 建立偏好訊息
-            like_list = parsed_preferences.get("喜歡", [])
-            dislike_list = parsed_preferences.get("不喜歡", [])
-            parts = []
-            if like_list:
-                parts.append(f"已為你新增『{'、'.join(like_list)}』偏好")
-            if dislike_list:
-                parts.append(f"已為你排除『{'、'.join(dislike_list)}』")
-            preference_msg = "；".join(parts)
-
-        # ------------------ 偵測刪除偏好 ------------------
+        # 偵測刪除偏好
         if user_id and User.objects.filter(id=user_id).exists():
             user = User.objects.get(id=user_id)
-            deleted_items = []
-            not_found_items = []
-
             for delete_kw in DELETE_KEYWORDS:
                 matches = re.findall(f"{delete_kw}([^\s，；]+)", user_message)
                 for item in matches:
                     pref_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user, keyword=item)
                     if pref_qs.exists():
                         pref_qs.delete()
-                        deleted_items.append(item)
-                    else:
-                        not_found_items.append(item)
 
-            # 建立刪除提示訊息
-            delete_msg_parts = []
-            if deleted_items:
-                delete_msg_parts.append(f"已成功刪除偏好：{'、'.join(deleted_items)}")
-            if not_found_items:
-                delete_msg_parts.append(f"未找到偏好：{'、'.join(not_found_items)}")
-            if delete_msg_parts:
-                preference_msg = preference_msg + ("\n" if preference_msg else "") + "；".join(delete_msg_parts)
+        # 組成 response_text
+        if not user_preferences['喜歡'] and not user_preferences['不喜歡']:
+            response_text = f"這是你的推薦，我們先根據\"{meal_time}\"推薦熱門餐廳。你也可以輸入口味喜好，我們會記住喔！"
+        else:
+            response_text = "根據您的偏好，我們為您推薦以下餐廳。你也可以修改或新增偏好！"
 
         # 推薦餐廳
         controller = RestaurantRecommendationController()
-        response = controller.process_query(
+        recommendation = controller.process_query(
             query_text=user_message,
             user_location=user_location,
             user_id=user_id,
@@ -118,18 +98,14 @@ def recommend_restaurant(request):
             preferences=user_preferences
         )
 
-        full_response_text = preference_msg + ("\n" if preference_msg else "") + response.get("response_text", "")
-
+        # 回傳 JSON（只保留必要欄位）
         return JsonResponse({
             "status": "success",
-            "data": {
-                "context_info": context_info,
-                "detected_emotions": detected_emotions,
-                "user_preferences": user_preferences,
-                "recommendation": response,
-                "preference_message": preference_msg,
-                "full_response_text": full_response_text,
-            }
+            "response_text": response_text,
+            "context_info": context_info,
+            "detected_emotions": detected_emotions,
+            "user_preferences": user_preferences,
+            "recommendation": recommendation
         })
 
     except Exception as e:
@@ -163,11 +139,7 @@ def save_user_preference(request):
                         user=user,
                         keyword=keyword,
                         preference_type=reverse_mapping[category],
-                        defaults={
-                            "weight": 1.0,
-                            "frequency": 1,
-                            "source": "manual",
-                        }
+                        defaults={"weight": 1.0, "frequency": 1, "source": "manual"}
                     )
                     if not created:
                         pref_obj.update_preference(boost=1.0, using_db=DB_ALIAS)
