@@ -40,21 +40,28 @@ def recommend_restaurant(request):
         # 偵測情緒
         detected_emotions = parse_emotion_from_text(user_message)
 
-        # 取得使用者偏好
-        user_preferences = {"喜歡": [], "不喜歡": []}
+        # 取得使用者長期偏好
+        long_term_preferences = {"喜歡": [], "不喜歡": []}
         if user_id and User.objects.filter(id=user_id).exists():
             user = User.objects.get(id=user_id)
             prefs_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user)
             for pref in prefs_qs:
                 mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
-                user_preferences.setdefault(mapped_type, []).append(pref.keyword)
+                long_term_preferences.setdefault(mapped_type, []).append(pref.keyword)
 
-        # 分析新的偏好並更新
+        # 分析新的偏好
         parsed_preferences = parse_preference_from_text(user_message)
+        if not parsed_preferences or parsed_preferences == ["無特別偏好"]:
+            parsed_preferences = {"long_term": {"喜歡": [], "不喜歡": []}, 
+                                  "short_term": {"喜歡": [], "不喜歡": []}}
+
+        short_term_preferences = parsed_preferences.get("short_term", {"喜歡": [], "不喜歡": []})
+
+        # 更新長期偏好到 DB
         if parsed_preferences and parsed_preferences != ["無特別偏好"] and user_id and User.objects.filter(id=user_id).exists():
             user = User.objects.get(id=user_id)
             for category in ["喜歡", "不喜歡"]:
-                for keyword in parsed_preferences.get(category, []):
+                for keyword in parsed_preferences.get("long_term", {}).get(category, []):
                     pref_obj, created = UserPreference.objects.using(DB_ALIAS).get_or_create(
                         user=user,
                         keyword=keyword,
@@ -64,12 +71,12 @@ def recommend_restaurant(request):
                     if not created:
                         pref_obj.update_preference(boost=1.0, using_db=DB_ALIAS)
 
-            # 更新 user_preferences
-            user_preferences = {"喜歡": [], "不喜歡": []}
+            # 更新 long_term_preferences
+            long_term_preferences = {"喜歡": [], "不喜歡": []}
             prefs_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user)
             for pref in prefs_qs:
                 mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
-                user_preferences[mapped_type].append(pref.keyword)
+                long_term_preferences[mapped_type].append(pref.keyword)
 
         # 偵測刪除偏好
         if user_id and User.objects.filter(id=user_id).exists():
@@ -82,7 +89,7 @@ def recommend_restaurant(request):
                         pref_qs.delete()
 
         # 組成 response_text
-        if not user_preferences['喜歡'] and not user_preferences['不喜歡']:
+        if not long_term_preferences['喜歡'] and not long_term_preferences['不喜歡']:
             response_text = f"這是你的推薦，我們先根據\"{meal_time}\"推薦熱門餐廳。你也可以輸入口味喜好，我們會記住喔！"
         else:
             response_text = "根據您的偏好，我們為您推薦以下餐廳。你也可以修改或新增偏好！"
@@ -95,16 +102,20 @@ def recommend_restaurant(request):
             user_id=user_id,
             context=context_info,
             emotions=detected_emotions,
-            preferences=user_preferences
+            preferences=long_term_preferences,
+            short_term_preferences=short_term_preferences
         )
 
-        # 回傳 JSON（只保留必要欄位）
+        # 回傳 JSON（長期與短期偏好）
         return JsonResponse({
             "status": "success",
             "response_text": response_text,
             "context_info": context_info,
             "detected_emotions": detected_emotions,
-            "user_preferences": user_preferences,
+            "user_preferences": {
+                "long_term": long_term_preferences,
+                "short_term": short_term_preferences
+            },
             "recommendation": recommendation
         })
 
@@ -130,11 +141,12 @@ def save_user_preference(request):
         user = User.objects.get(id=user_id)
         parsed_preferences = parse_preference_from_text(preferences_text)
         if not parsed_preferences:
-            parsed_preferences = {"提示": "未偵測到明確偏好"}
+            parsed_preferences = {"long_term": {"喜歡": [], "不喜歡": []}, "short_term": {"喜歡": [], "不喜歡": []}}
 
+        # 儲存長期偏好
         if parsed_preferences != ["無特別偏好"]:
             for category in ["喜歡", "不喜歡"]:
-                for keyword in parsed_preferences.get(category, []):
+                for keyword in parsed_preferences.get("long_term", {}).get(category, []):
                     pref_obj, created = UserPreference.objects.using(DB_ALIAS).get_or_create(
                         user=user,
                         keyword=keyword,
@@ -144,7 +156,11 @@ def save_user_preference(request):
                     if not created:
                         pref_obj.update_preference(boost=1.0, using_db=DB_ALIAS)
 
-        return JsonResponse({"status": "success", "message": "偏好已儲存", "parsed_preferences": parsed_preferences})
+        return JsonResponse({
+            "status": "success",
+            "message": "偏好已儲存",
+            "parsed_preferences": parsed_preferences
+        })
 
     except Exception as e:
         print(f"儲存使用者偏好錯誤：{str(e)}")
@@ -164,12 +180,12 @@ def get_user_preference(request):
 
         user = User.objects.get(id=user_id)
         prefs_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user)
-        preferences = {"喜歡": [], "不喜歡": []}
+        long_term_preferences = {"喜歡": [], "不喜歡": []}
         for pref in prefs_qs:
             mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
-            preferences[mapped_type].append(pref.keyword)
+            long_term_preferences[mapped_type].append(pref.keyword)
 
-        return JsonResponse({"status": "success", "preferences": preferences})
+        return JsonResponse({"status": "success", "preferences": {"long_term": long_term_preferences}})
 
     except Exception as e:
         print(f"讀取使用者偏好錯誤：{str(e)}")

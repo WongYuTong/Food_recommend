@@ -1,6 +1,5 @@
 class RestaurantRecommendationController:
     def __init__(self):
-        # 模擬餐廳資料
         self.restaurants = [
             {
                 "name": "小確幸早午餐",
@@ -82,7 +81,16 @@ class RestaurantRecommendationController:
             },
         ]
 
-    def process_query(self, query_text, user_location=None, user_id=None, context=None, emotions=None, preferences=None):
+    def process_query(
+        self,
+        query_text,
+        user_location=None,
+        user_id=None,
+        context=None,
+        emotions=None,
+        preferences=None,
+        short_term_preferences=None
+    ):
         # 取得時段
         meal_time = context.get("meal_time", "午餐") if context else "午餐"
 
@@ -93,16 +101,16 @@ class RestaurantRecommendationController:
         if not filtered_restaurants:
             filtered_restaurants = self.restaurants
 
-        # 偏好
-        liked = preferences.get("喜歡", []) if isinstance(preferences, dict) else []
-        disliked = preferences.get("不喜歡", []) if isinstance(preferences, dict) else []
+        # 長期偏好
+        long_liked = preferences.get("喜歡", []) if isinstance(preferences, dict) else []
+        long_disliked = preferences.get("不喜歡", []) if isinstance(preferences, dict) else []
 
-        # 組合查詢關鍵字
-        query_keywords = liked.copy()
-        if query_text:
-            query_keywords += [word.strip() for word in query_text.replace("，", ",").split(",")]
+        # 短期偏好
+        short_liked = []
+        if isinstance(short_term_preferences, dict):
+            short_liked = short_term_preferences.get("喜歡", [])
 
-        # 情緒對應食物
+        # 情緒對應食物加到短期偏好
         emotion_food_map = {
             "開心": ["烤肉", "串燒", "火鍋", "牛肉"],
             "放鬆": ["咖啡", "茶", "司康", "輕食"],
@@ -119,24 +127,30 @@ class RestaurantRecommendationController:
         if emotions:
             for emo in emotions:
                 if emo in emotion_food_map:
-                    query_keywords.extend(emotion_food_map[emo])
+                    short_liked.extend(emotion_food_map[emo])
 
         # 計分
         scored_restaurants = []
         for rest in filtered_restaurants:
             score = 0
-            for kw in query_keywords:
+            # 短期偏好加分高
+            for kw in short_liked:
                 if any(kw in dish for dish in rest["matched_dishes"]):
-                    score += 2
-            for like in liked:
-                if any(like in dish for dish in rest["matched_dishes"]):
+                    score += 3
+            # 長期偏好加分
+            for kw in long_liked:
+                if any(kw in dish for dish in rest["matched_dishes"]):
                     score += 1
-            for dislike in disliked:
-                if any(dislike in dish for dish in rest["matched_dishes"]):
+            # 長期不喜歡減分
+            for kw in long_disliked:
+                if any(kw in dish for dish in rest["matched_dishes"]):
                     score -= 3
             scored_restaurants.append((score, rest))
 
+        # 分數排序
         scored_restaurants.sort(key=lambda x: x[0], reverse=True)
+
+        # 取前三名推薦
         recommended_restaurants = [rest for score, rest in scored_restaurants[:3]]
 
         return {"recommended_restaurants": recommended_restaurants}
