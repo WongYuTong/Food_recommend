@@ -253,44 +253,57 @@ class GenerateRecommendReasonView(APIView):
             "message": "推薦理由已產生"
         }, status=status.HTTP_200_OK)
 
-# 功能 3：模糊語句提示（進階優化版）
+# 功能 3-1：模糊語句提示（最終優化版）
 class GeneratePromptView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        user_input = request.data.get("input", "").strip()
+        req_type = request.data.get("type")
+        user_input = request.data.get("text", "").strip()
 
-        vague_keywords = {
-            "輕微": [
-                "沒想法", "還沒想好", "沒特別想吃", "還不知道吃什麼", "需要想一下", "再看看"
+        if req_type != "text" or not user_input:
+            return Response({
+                "status": "error",
+                "data": None,
+                "message": "請提供 type='text' 且包含 text 欄位"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 模糊語句依照程度分類（可擴充）
+        vague_patterns = {
+            "vague": [
+                "隨便", "你決定", "不知道", "不清楚", "沒意見", "沒想吃的", "不知道吃什麼", "不確定", "沒靈感", "隨你"
             ],
-            "中等": [
-                "都可以", "無所謂", "你看著辦", "你幫我選", "再說吧", "看心情", "看著辦"
+            "medium": [
+                "都可以", "無所謂", "你看著辦", "你幫我選", "再說吧", "看心情", "看著辦", "可以啊都行", "沒關係"
             ],
-            "明確": [
-                "隨便", "你決定", "不知道", "沒意見", "不知道吃什麼", "不清楚", "沒想吃的"
+            "slight": [
+                "沒想法", "還沒想好", "沒特別想吃", "還不知道吃什麼", "需要想一下", "再看看", "再想想"
             ]
         }
 
-        # 預設提示語
-        level = "無"
-        prompt = "有特別想吃的嗎？也可以說說你不想吃的類型，我們來幫你挑～"
 
-        # 判斷模糊程度
-        for current_level, keywords in vague_keywords.items():
+        level = "clear"
+        guidance = "歡迎告訴我們今天想吃什麼，或也可以提供不想吃的類型，我們會幫你挑選適合的餐廳！"
+
+        # 遍歷所有模糊等級，依序比對
+        for current_level, keywords in vague_patterns.items():
             if any(keyword in user_input for keyword in keywords):
                 level = current_level
-                if current_level == "輕微":
-                    prompt = "想一下今天是想吃簡單一點的，還是想來點特別的呢？"
-                elif current_level == "中等":
-                    prompt = "那你偏好什麼類型呢？或是有不喜歡吃的料理？我們可以先排除看看！"
-                elif current_level == "明確":
-                    prompt = "沒問題！先從排除不愛吃的類型開始吧～像是不吃辣、不吃炸物這些都可以說唷！"
+                if level == "slight":
+                    guidance = "今天想吃點簡單的還是來點特別的呢？幾個方向幫你發想一下～"
+                elif level == "medium":
+                    guidance = "那你偏好什麼類型？或有不喜歡的料理嗎？我們可以幫你排除一部分喔！"
+                elif level == "vague":
+                    guidance = "可以先從『不想吃什麼』開始講起唷～像是不吃辣、不吃炸物之類的都可以說出來！"
                 break
 
         return Response({
-            "level": level,
-            "prompt": prompt
+            "status": "success",
+            "data": {
+                "level": level,
+                "guidance": guidance
+            },
+            "message": "模糊語句提示已產生"
         }, status=status.HTTP_200_OK)
 
 

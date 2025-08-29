@@ -1,68 +1,59 @@
+import sys
+import os
 import requests
+from termcolor import colored
 
-url = "http://localhost:8000/agent/generate_prompt/"
+# ✅ 設定匯入路徑：將 'agent_module' 資料夾加進來
+sys.path.append(os.path.join(os.path.dirname(__file__), 'agent_module'))
 
-# 測試資料：輸入句 → 預期等級與提示內容（部分可模糊比對）
-test_cases = [
-    {
-        "input": "我還沒想好要吃什麼",
-        "expected_level": "輕微",
-        "expected_prompt_contains": "簡單一點的"
-    },
-    {
-        "input": "都可以啦",
-        "expected_level": "中等",
-        "expected_prompt_contains": "偏好什麼類型"
-    },
-    {
-        "input": "你決定吧",
-        "expected_level": "明確",
-        "expected_prompt_contains": "排除不愛吃的"
-    },
-    {
-        "input": "不知道吃什麼",
-        "expected_level": "明確",
-        "expected_prompt_contains": "排除不愛吃的"
-    },
-    {
-        "input": "我需要想一下",
-        "expected_level": "輕微",
-        "expected_prompt_contains": "簡單一點的"
-    },
-    {
-        "input": "我今天沒意見",
-        "expected_level": "明確",
-        "expected_prompt_contains": "排除不愛吃的"
-    },
-    {
-        "input": "我想吃披薩",
-        "expected_level": "無",
-        "expected_prompt_contains": "有特別想吃的嗎"
-    }
-]
+# ✅ 匯入 sample_data 中的 PROMPT_TEST_INPUTS
+from sample_data import PROMPT_TEST_INPUTS
 
-# 統計變數
-passed = 0
-failed = 0
+# 🌐 API URL（功能三-1：模糊提示）
+API_URL = "http://localhost:8000/agent/generate_prompt/"
 
-# 執行測試
-for i, case in enumerate(test_cases, start=1):
-    response = requests.post(url, json={"input": case["input"]})
-    result = response.json()
-    level = result.get("level")
-    prompt = result.get("prompt", "")
+def test_generate_prompt():
+    print(colored("🎯 功能三-1：模糊語句提示 測試開始", "cyan"))
+    print("--------------------------------------------------")
 
-    print(f"\n🧪 測試 {i}: {case['input']}")
-    print(f"✅ 預期 level：{case['expected_level']}")
-    print(f"📥 回傳 level：{level}")
-    print(f"🔍 回傳 prompt：{prompt}")
+    success_count = 0  # 統計通過數量
 
-    if level == case["expected_level"] and case["expected_prompt_contains"] in prompt:
-        print("🎉 測試通過")
-        passed += 1
-    else:
-        print("❌ 測試失敗")
-        failed += 1
+    for idx, item in enumerate(PROMPT_TEST_INPUTS):
+        text = item["text"]
+        expected_level = item["expected_level"]  # ✅ 修正這裡
 
-# 總結
-print(f"\n📊 測試結果：{passed}/{len(test_cases)} 通過，{failed} 失敗")
+        payload = {
+            "type": "text",
+            "text": text
+        }
+
+        try:
+            response = requests.post(API_URL, json=payload)
+            result = response.json()
+
+            print(f"📝 測試 {idx + 1}: {text}")
+            print("🔁 回傳狀態碼:", response.status_code)
+
+            if result.get("status") == "success" and "level" in result.get("data", {}):
+                actual_level = result["data"]["level"]
+
+                if actual_level == expected_level:
+                    print(colored(f"✅ 判斷正確，模糊程度：{actual_level}", "green"))
+                    success_count += 1
+                else:
+                    print(colored("❌ 判斷錯誤", "red"))
+                    print(f"   預期：{expected_level}")
+                    print(f"   實際：{actual_level}")
+            else:
+                print(colored("❌ 回傳格式異常或缺少欄位", "red"))
+                print("回傳內容：", result)
+
+        except Exception as e:
+            print(colored(f"🚨 發生錯誤：{e}", "red"))
+
+        print("--------------------------------------------------")
+
+    print(colored(f"\n📊 測試完成：共 {success_count}/{len(PROMPT_TEST_INPUTS)} 筆通過\n", "cyan"))
+
+if __name__ == "__main__":
+    test_generate_prompt()
