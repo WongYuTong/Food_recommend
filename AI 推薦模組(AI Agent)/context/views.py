@@ -21,8 +21,6 @@ reverse_mapping = {"喜歡": "like", "不喜歡": "dislike"}
 # 用於偵測刪除偏好的關鍵字
 DELETE_KEYWORDS = ["不喜歡", "不要", "不想吃", "刪掉", "移除", "取消"]
 
-DB_ALIAS = 'user_pref'  # 指定 PostgreSQL 資料庫
-
 # ---------------- 推薦餐廳 ----------------
 @csrf_exempt
 @require_POST
@@ -44,7 +42,7 @@ def recommend_restaurant(request):
         long_term_preferences = {"喜歡": [], "不喜歡": []}
         if user_id and User.objects.filter(id=user_id).exists():
             user = User.objects.get(id=user_id)
-            prefs_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user)
+            prefs_qs = UserPreference.objects.filter(user=user)
             for pref in prefs_qs:
                 mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
                 long_term_preferences.setdefault(mapped_type, []).append(pref.keyword)
@@ -62,18 +60,18 @@ def recommend_restaurant(request):
             user = User.objects.get(id=user_id)
             for category in ["喜歡", "不喜歡"]:
                 for keyword in parsed_preferences.get("long_term", {}).get(category, []):
-                    pref_obj, created = UserPreference.objects.using(DB_ALIAS).get_or_create(
+                    pref_obj, created = UserPreference.objects.get_or_create(
                         user=user,
                         keyword=keyword,
                         preference_type=reverse_mapping[category],
                         defaults={"weight": 1.0, "frequency": 1, "source": "dialog"}
                     )
                     if not created:
-                        pref_obj.update_preference(boost=1.0, using_db=DB_ALIAS)
+                        pref_obj.update_preference(boost=1.0)
 
             # 更新 long_term_preferences
             long_term_preferences = {"喜歡": [], "不喜歡": []}
-            prefs_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user)
+            prefs_qs = UserPreference.objects.filter(user=user)
             for pref in prefs_qs:
                 mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
                 long_term_preferences[mapped_type].append(pref.keyword)
@@ -84,7 +82,7 @@ def recommend_restaurant(request):
             for delete_kw in DELETE_KEYWORDS:
                 matches = re.findall(f"{delete_kw}([^\s，；]+)", user_message)
                 for item in matches:
-                    pref_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user, keyword=item)
+                    pref_qs = UserPreference.objects.filter(user=user, keyword=item)
                     if pref_qs.exists():
                         pref_qs.delete()
 
@@ -147,14 +145,14 @@ def save_user_preference(request):
         if parsed_preferences != ["無特別偏好"]:
             for category in ["喜歡", "不喜歡"]:
                 for keyword in parsed_preferences.get("long_term", {}).get(category, []):
-                    pref_obj, created = UserPreference.objects.using(DB_ALIAS).get_or_create(
+                    pref_obj, created = UserPreference.objects.get_or_create(
                         user=user,
                         keyword=keyword,
                         preference_type=reverse_mapping[category],
                         defaults={"weight": 1.0, "frequency": 1, "source": "manual"}
                     )
                     if not created:
-                        pref_obj.update_preference(boost=1.0, using_db=DB_ALIAS)
+                        pref_obj.update_preference(boost=1.0)
 
         return JsonResponse({
             "status": "success",
@@ -179,7 +177,7 @@ def get_user_preference(request):
             return JsonResponse({"status": "error", "message": "使用者不存在"}, status=404)
 
         user = User.objects.get(id=user_id)
-        prefs_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user)
+        prefs_qs = UserPreference.objects.filter(user=user)
         long_term_preferences = {"喜歡": [], "不喜歡": []}
         for pref in prefs_qs:
             mapped_type = type_mapping.get(pref.preference_type, pref.preference_type)
@@ -214,7 +212,7 @@ def delete_user_preference_item(request):
         for delete_kw in DELETE_KEYWORDS:
             matches = re.findall(f"{delete_kw}([^\s，；]+)", sentence)
             for item in matches:
-                pref_qs = UserPreference.objects.using(DB_ALIAS).filter(user=user, keyword=item)
+                pref_qs = UserPreference.objects.filter(user=user, keyword=item)
                 if pref_qs.exists():
                     pref_qs.delete()
                     deleted_items.append(item)

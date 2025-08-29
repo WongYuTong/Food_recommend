@@ -28,13 +28,13 @@ class UserPreference(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "user_preferences"  # 🔑 指定使用你現有的 PostgreSQL 資料表
+        db_table = "user_preferences"  # 指定使用你現有的 PostgreSQL 資料表
         unique_together = ('user', 'keyword', 'preference_type')  # 同一個使用者、同一個偏好、同一類型唯一
 
     def __str__(self):
         return f"{self.user.username} - {self.keyword} ({self.preference_type}, weight={self.weight:.2f})"
 
-    def update_preference(self, boost: float = 0.2, using_db: str = 'user_pref'):
+    def update_preference(self, boost: float = 0.2, using_db: str = 'default'):
         """
         當使用者再次提到相同偏好時，更新頻率、權重和最後時間
         boost: 每次增加的權重
@@ -45,7 +45,7 @@ class UserPreference(models.Model):
         self.last_updated = timezone.now()
         self.save(using=using_db)
 
-    def decay_weight(self, days: int = 30, decay_rate: float = 0.9, using_db: str = 'user_pref'):
+    def decay_weight(self, days: int = 30, decay_rate: float = 0.9, using_db: str = 'default'):
         """
         如果偏好太久沒更新，自動降低權重
         days: 超過多少天沒更新就衰減
