@@ -1,11 +1,9 @@
 # context/views.py
-from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 import json
 import re
-from django.utils import timezone
 
 from utils.chat_view import get_current_context_info
 from utils.emotion_parser import parse_emotion_from_text
@@ -20,6 +18,7 @@ reverse_mapping = {"喜歡": "like", "不喜歡": "dislike"}
 
 # 用於偵測刪除偏好的關鍵字
 DELETE_KEYWORDS = ["不喜歡", "不要", "不想吃", "刪掉", "移除", "取消"]
+
 
 # ---------------- 推薦餐廳 ----------------
 @csrf_exempt
@@ -138,11 +137,11 @@ def save_user_preference(request):
 
         user = User.objects.get(id=user_id)
         parsed_preferences = parse_preference_from_text(preferences_text)
-        if not parsed_preferences:
-            parsed_preferences = {"long_term": {"喜歡": [], "不喜歡": []}, "short_term": {"喜歡": [], "不喜歡": []}}
-
-        # 儲存長期偏好
-        if parsed_preferences != ["無特別偏好"]:
+        if not parsed_preferences or parsed_preferences == ["無特別偏好"]:
+            parsed_preferences = {"long_term": {"喜歡": [], "不喜歡": []}, 
+                                  "short_term": {"喜歡": [], "不喜歡": []}}
+        else:
+            # 儲存長期偏好
             for category in ["喜歡", "不喜歡"]:
                 for keyword in parsed_preferences.get("long_term", {}).get(category, []):
                     pref_obj, created = UserPreference.objects.get_or_create(
@@ -156,7 +155,7 @@ def save_user_preference(request):
 
         return JsonResponse({
             "status": "success",
-            "message": "偏好已儲存",
+            "message": "偏好已更新",
             "parsed_preferences": parsed_preferences
         })
 
