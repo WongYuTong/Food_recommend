@@ -24,7 +24,7 @@ class RestaurantRecommendationController:
                 "website": "http://example-ramen.com",
                 "phone": "02-8765-4321",
                 "user_ratings_total": 98,
-                "matched_dishes": ["豚骨拉麵", "煎餃"],
+                "matched_dishes": ["豚骨拉麵", "煎餃", "雞肉拉麵"],
                 "meal_types": ["晚餐", "宵夜"],
             },
             {
@@ -37,7 +37,7 @@ class RestaurantRecommendationController:
                 "website": "http://liangmian.com",
                 "phone": "02-3344-5566",
                 "user_ratings_total": 120,
-                "matched_dishes": ["涼麵", "味噌湯"],
+                "matched_dishes": ["涼麵", "味噌湯", "海鮮涼麵", "素食涼麵"],
                 "meal_types": ["午餐", "晚餐"],
             },
             {
@@ -50,7 +50,7 @@ class RestaurantRecommendationController:
                 "website": "http://dessertqueen.com",
                 "phone": "02-5566-7788",
                 "user_ratings_total": 210,
-                "matched_dishes": ["舒芙蕾", "提拉米蘇", "牛肉鹹派"],
+                "matched_dishes": ["舒芙蕾", "提拉米蘇", "牛肉鹹派", "蛋糕", "巧克力"],
                 "meal_types": ["下午茶"],
             },
             {
@@ -63,7 +63,7 @@ class RestaurantRecommendationController:
                 "website": "http://happybbq.com",
                 "phone": "02-3344-5566",
                 "user_ratings_total": 200,
-                "matched_dishes": ["烤牛肉", "串燒", "火鍋"],
+                "matched_dishes": ["烤牛肉", "串燒", "火鍋", "豬肉串", "海鮮烤盤"],
                 "meal_types": ["晚餐", "宵夜"],
             },
             {
@@ -76,8 +76,60 @@ class RestaurantRecommendationController:
                 "website": "http://relaxcafe.com",
                 "phone": "02-7788-9900",
                 "user_ratings_total": 130,
-                "matched_dishes": ["手沖咖啡", "司康", "沙拉"],
+                "matched_dishes": ["手沖咖啡", "司康", "沙拉", "輕食三明治"],
                 "meal_types": ["下午茶", "早餐"],
+            },
+            {
+                "name": "海鮮饗宴",
+                "address": "台北市信義區海鮮路 50 號",
+                "rating": 4.5,
+                "price_level_text": "$$$",
+                "photo": "",
+                "is_open": True,
+                "website": "http://seafoodfeast.com",
+                "phone": "02-1122-3344",
+                "user_ratings_total": 180,
+                "matched_dishes": ["烤鮭魚", "海鮮鍋", "生蠔", "蝦仁炒飯", "龍蝦"],
+                "meal_types": ["午餐", "晚餐"],
+            },
+            {
+                "name": "牛排之家",
+                "address": "台北市中山區牛排街 88 號",
+                "rating": 4.6,
+                "price_level_text": "$$$",
+                "photo": "",
+                "is_open": True,
+                "website": "http://steakhouse.com",
+                "phone": "02-2233-4455",
+                "user_ratings_total": 160,
+                "matched_dishes": ["肋眼牛排", "菲力牛排", "牛肉漢堡", "沙拉", "燉牛肉"],
+                "meal_types": ["晚餐"],
+            },
+            {
+                "name": "雞肉專賣店",
+                "address": "台北市大同區雞街 12 號",
+                "rating": 4.3,
+                "price_level_text": "$$",
+                "photo": "",
+                "is_open": True,
+                "website": "http://chickenhouse.com",
+                "phone": "02-5566-8899",
+                "user_ratings_total": 140,
+                "matched_dishes": ["烤雞腿", "雞肉沙拉", "雞肉捲", "雞肉湯", "咖哩雞"],
+                "meal_types": ["午餐", "晚餐"],
+            },
+            {
+                "name": "豬肉坊",
+                "address": "台北市南港區豬肉路 33 號",
+                "rating": 4.2,
+                "price_level_text": "$$",
+                "photo": "",
+                "is_open": True,
+                "website": "http://porkcorner.com",
+                "phone": "02-6677-8899",
+                "user_ratings_total": 110,
+                "matched_dishes": ["烤豬排", "豬肉鍋", "五花肉", "豬肉漢堡", "滷豬腳"],
+                "meal_types": ["午餐", "晚餐", "宵夜"],
             },
         ]
 
@@ -133,18 +185,34 @@ class RestaurantRecommendationController:
         scored_restaurants = []
         for rest in filtered_restaurants:
             score = 0
-            # 短期偏好加分高
+            # 短期偏好加分固定3
             for kw in short_liked:
                 if any(kw in dish for dish in rest["matched_dishes"]):
                     score += 3
-            # 長期偏好加分
+            # 長期喜歡依權重加分
             for kw in long_liked:
+                weight = 1
+                if user_id:
+                    from context.models import UserPreference  # 替換為你的實際 models 模組
+                    pref_obj = UserPreference.objects.filter(
+                        user_id=user_id, keyword=kw, preference_type="like"
+                    ).first()
+                    if pref_obj:
+                        weight = pref_obj.weight
                 if any(kw in dish for dish in rest["matched_dishes"]):
-                    score += 1
-            # 長期不喜歡減分
+                    score += weight
+            # 長期不喜歡依權重扣分
             for kw in long_disliked:
+                weight = 1
+                if user_id:
+                    from context.models import UserPreference
+                    pref_obj = UserPreference.objects.filter(
+                        user_id=user_id, keyword=kw, preference_type="dislike"
+                    ).first()
+                    if pref_obj:
+                        weight = pref_obj.weight
                 if any(kw in dish for dish in rest["matched_dishes"]):
-                    score -= 3
+                    score -= weight
             scored_restaurants.append((score, rest))
 
         # 分數排序
