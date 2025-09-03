@@ -10,13 +10,30 @@ NEGATIVE_INPUTS = [
     {"text": "我不太喜歡炸雞和披薩", "expected": ["炸雞", "披薩"]},
     {"text": "不要推薦吃到飽，我怕吃不回本", "expected": ["吃到飽"]},
     {"text": "我最近牙痛，不想吃太硬的", "expected": ["太硬"]},
-    {"text": "不想吃太油的料理", "expected": ["太油"]},
+    {"text": "不想吃太油的料理", "expected": ["油膩"]},
     {"text": "別推薦早午餐了", "expected": ["早午餐"]},
     {"text": "不想要餐廳火鍋或地方牛排", "expected": ["火鍋", "牛排"]},
     {"text": "不想吃吃到飽的", "expected": ["吃到飽"]},
     {"text": "不要推薦火鍋了", "expected": ["火鍋"]},
     {"text": "我不喜歡早午餐呢", "expected": ["早午餐"]},
     {"text": "不要那家甜點店啦", "expected": ["甜點"]},
+    {"text": "這間太油了，我不愛", "expected": ["油膩"]},
+    {"text": "我覺得太貴，CP 值太低", "expected": ["高價"]},
+    {"text": "不太乾淨感覺髒髒的", "expected": ["不乾淨"]},
+    {"text": "太吵了不適合聚餐", "expected": ["吵雜"]},
+    {"text": "太辣太鹹我會受不了", "expected": ["重口味"]},
+
+    # ✅ 以下為新增測試情境
+    {"text": "我不太能接受太鹹的東西", "expected": ["重口味"]},
+    {"text": "太吵會讓我頭痛，不想要那種", "expected": ["吵雜"]},
+    {"text": "感覺不太乾淨，我不會去", "expected": ["不乾淨"]},
+    {"text": "那種份量少又貴的我不考慮", "expected": ["高價"]},
+    {"text": "甜到膩那種我無法", "expected": ["甜膩"]},
+    {"text": "不太想吃太多醬的", "expected": ["醬多"]},
+    {"text": "這家真的有點雷，不太想去", "expected": ["雷店"]},
+    {"text": "太油、太鹹、太辣我都會崩潰", "expected": ["油膩", "重口味"]},
+    {"text": "這種太文青的風格我沒有很愛", "expected": ["文青風格"]},
+    {"text": "那種很 Instagram 打卡店不太適合我", "expected": ["網美店"]}
 ]
 
 
@@ -194,3 +211,51 @@ GUIDANCE_TEST_INPUTS = [
 ]
 
 
+# --- 整合測試用句子（擴充版 schema；與舊版相容） ---
+INTEGRATION_TEST_INPUTS = [
+    {
+        "text": "我不想吃火鍋、甜點，想要找適合聚餐的店",
+        "expected_keywords": ["適合聚餐"],
+        "expected_excludes": ["火鍋", "甜點"],
+        # 新增：這一題至少要回幾家（避免 4 家時看起來像失敗）
+        "min_results": 5,
+        # 新增：指定一定不能出現的餐廳名稱（更直觀驗證）
+        "must_exclude_names": ["小確幸甜點店"],
+        # 新增：是否允許補位（若你想固定 5 家就 True；不想補位就 False）
+        "allow_backfill": True,
+    },
+    {
+        "text": "我吃素，怕辣，也不想要拉麵",
+        "expected_keywords": ["素食需求", "避免辛辣料理"],
+        "expected_excludes": ["拉麵"],
+        "min_results": 5,
+        "must_exclude_names": ["拉麵一郎"],
+        "allow_backfill": True,
+    },
+    {
+        "text": "不想吃燒烤，想要便宜的餐廳",
+        "expected_keywords": ["價格實惠"],
+        "expected_excludes": ["燒烤"],
+        "min_results": 5,
+        "must_exclude_names": [],
+        "allow_backfill": True,
+    },
+    {
+        "text": "我要帶爸媽一起吃，不要吃太油的",
+        # 「太油/油膩」比較像『風格偏好』，不建議當排除詞（因為店家標籤很少會寫『油膩』）
+        # 建議移到 expected_flags，驗證推薦理由是否含「清爽口味」「適合家庭聚會」
+        "expected_keywords": ["適合家庭聚會", "清爽口味"],
+        "expected_excludes": [],
+        "expected_flags": ["清爽口味"],  # 可選：強化驗證語義
+        "min_results": 5,
+        "allow_backfill": True,
+    },
+    {
+        "text": "不想要漢堡或美式，希望吃清爽一點的",
+        "expected_keywords": ["清爽口味"],
+        "expected_excludes": ["漢堡", "美式"],
+        "min_results": 5,
+        "must_exclude_names": [],
+        "allow_backfill": True,
+    },
+]

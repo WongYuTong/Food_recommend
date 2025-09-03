@@ -14,6 +14,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
+from rest_framework.test import APIRequestFactory  # ✅ 新增這行
+from rest_framework.request import Request
+from rest_framework.parsers import JSONParser
 
 # 本地 utils（共用邏輯）
 from .utils_card import (
@@ -110,8 +113,16 @@ class GenerateRecommendReasonView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        req_type = request.data.get('type')
-        restaurants = request.data.get('restaurants', [])
+        # ✅ 兼容 DRF Request 和 WSGIRequest（for 整合測試）
+        if hasattr(request, 'data'):
+            req_type = request.data.get('type')
+            restaurants = request.data.get('restaurants', [])
+        else:
+            req_type = request.POST.get('type')
+            try:
+                restaurants = json.loads(request.body.decode()).get("restaurants", [])
+            except Exception:
+                restaurants = []
 
         if req_type != 'restaurant_list' or not isinstance(restaurants, list):
             return Response({
@@ -238,7 +249,6 @@ class GenerateRecommendReasonView(APIView):
                 "recommend_reason": full_reason
             })
 
-        # 排序（推薦分數 > 評價 > 評論數）
         sorted_results = sorted(results, key=lambda x: (
             x.get('reason_score') or 0,
             x.get('rating') or 0,
@@ -391,13 +401,20 @@ class SuggestInputGuidanceView(APIView):
 
 
 # 功能 4：推薦卡片欄位模擬輸出(強化版)
-
 class GenerateCardDataView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        req_type = request.data.get('type')
-        restaurants = request.data.get('restaurants', [])
+        # ✅ 保險處理：兼容 DRF Request 和 WSGIRequest（整合測試用）
+        if hasattr(request, 'data'):
+            req_type = request.data.get('type')
+            restaurants = request.data.get('restaurants', [])
+        else:
+            req_type = request.POST.get('type')
+            try:
+                restaurants = json.loads(request.body.decode()).get("restaurants", [])
+            except Exception:
+                restaurants = []
 
         if req_type != 'restaurant_list' or not isinstance(restaurants, list):
             return Response({
@@ -441,7 +458,6 @@ class GenerateCardDataView(APIView):
                 else:
                     highlight = ""
 
-
             # 推薦理由
             recommend_reason = generate_recommend_reason(matched_tags, highlight, district, price_desc)
 
@@ -472,8 +488,6 @@ class GenerateCardDataView(APIView):
                 style = "美式"
             elif "壽司" in name or "日式" in tags or "拉麵" in name:
                 style = "日式"
-
-
 
             # 模擬營業時間與預留欄位
             opening_hours = "11:00 - 21:00"
@@ -506,6 +520,106 @@ class GenerateCardDataView(APIView):
                 "results": results
             },
             "message": "卡片欄位資料已產生"
+        }, status=status.HTTP_200_OK)
+
+# ✅ 整合測試：功能一 → 四 → 二（修正版）
+
+class IntegrationTestView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [JSONParser]  # ✅ 支援 application/json
+
+    def post(self, request):
+        from .sample_data import RESTAURANTS_SAMPLE
+        from .views import ExtractNegativeConditionsView, GenerateCardDataView, GenerateRecommendReasonView
+
+        factory = APIRequestFactory()
+        input_text = request.data.get("text", "").strip()
+
+        if not input_text:
+            return Response({
+                "status": "error",
+                "data": None,
+                "message": "請提供 text 欄位"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        print("\n🎯 整合測試開始 >>>")
+        print(f"📝 使用者輸入：{input_text}")
+
+        # ✅ Step 1：功能一（排除條件擷取）
+        request_exclusion = factory.post("/fake_path/", {
+            "text": input_text
+        }, format='json')
+        wrapped_request = Request(request_exclusion, parsers=[JSONParser()])  # ✅ 加上 parsers
+        exclusion_response = ExtractNegativeConditionsView().post(wrapped_request)
+
+        if hasattr(exclusion_response, "data") and isinstance(exclusion_response.data, dict):
+            exclusion_data_raw = exclusion_response.data
+        elif hasattr(exclusion_response, "_data") and isinstance(exclusion_response._data, dict):
+            exclusion_data_raw = exclusion_response._data
+        else:
+            exclusion_data_raw = {}
+
+        excluded_items = []
+        if isinstance(exclusion_data_raw, dict):
+            data_field = exclusion_data_raw.get("data", {})
+            if isinstance(data_field, dict):
+                excluded_items = data_field.get("excluded", [])
+
+        print(f"🚫 排除項目：{excluded_items}")
+
+        # ✅ Step 2：過濾掉排除的餐廳
+        filtered = []
+        for r in RESTAURANTS_SAMPLE:
+            name = r.get("name", "")
+            tags = r.get("matched_tags", [])
+            if any(ex in name for ex in excluded_items):
+                continue
+            if any(ex in tag for ex in excluded_items for tag in tags):
+                continue
+            filtered.append(r)
+
+        print(f"✅ 通過排除篩選的餐廳數：{len(filtered)}")
+
+        # ✅ Step 3：功能四（欄位補強）
+        request_card_data = factory.post("/fake_path/", {
+            "type": "restaurant_list",
+            "restaurants": filtered
+        }, format='json')
+        wrapped_card_request = Request(request_card_data, parsers=[JSONParser()])  # ✅ 加上 parsers
+        card_data_response = GenerateCardDataView().post(wrapped_card_request)
+
+        if hasattr(card_data_response, "data") and isinstance(card_data_response.data, dict):
+            card_data_raw = card_data_response.data
+        elif hasattr(card_data_response, "_data") and isinstance(card_data_response._data, dict):
+            card_data_raw = card_data_response._data
+        else:
+            card_data_raw = {}
+
+        card_restaurants = card_data_raw.get("data", {}).get("results", [])
+        print(f"📦 補完欄位的餐廳數：{len(card_restaurants)}")
+
+        # ✅ Step 4：功能二（推薦理由補強）
+        request_reason = factory.post("/fake_path/", {
+            "type": "restaurant_list",
+            "restaurants": card_restaurants
+        }, format='json')
+        wrapped_reason_request = Request(request_reason, parsers=[JSONParser()])  # ✅ 加上 parsers
+        final_response = GenerateRecommendReasonView().post(wrapped_reason_request)
+
+        if hasattr(final_response, "data") and isinstance(final_response.data, dict):
+            final_data_raw = final_response.data
+        elif hasattr(final_response, "_data") and isinstance(final_response._data, dict):
+            final_data_raw = final_response._data
+        else:
+            final_data_raw = {}
+
+        final_results = final_data_raw.get("data", {})
+        print(f"🌟 最終推薦結果筆數：{len(final_results) if isinstance(final_results, list) else '未知'}")
+
+        return Response({
+            "status": "success",
+            "data": final_results,
+            "message": "整合流程已執行完成"
         }, status=status.HTTP_200_OK)
 
 
