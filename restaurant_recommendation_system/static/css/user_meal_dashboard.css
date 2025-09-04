@@ -138,3 +138,13 @@ canvas {
     height: 70vh;        /* 原本60vh，改38vh */
     min-height: 70vh;   /* 視需要可再調整 */
 }
+
+/* 可選：讓卡片圖片區塊固定寬高 */
+.card-img-left {
+    width: 120px;
+    height: 100%;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
