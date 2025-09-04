@@ -29,7 +29,11 @@ def test_integration():
 
         print(f"📝 測試 {idx + 1}: {text}")
 
-        payload = {"text": text}
+        payload = {
+            "text": text,
+            "user_input": text  # ✅ 傳入使用者輸入給功能二推薦理由補強用
+        }
+
 
         try:
             response = requests.post(API_URL, json=payload)

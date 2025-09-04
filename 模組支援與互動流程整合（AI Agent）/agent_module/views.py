@@ -113,7 +113,9 @@ class GenerateRecommendReasonView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        # ✅ 兼容 DRF Request 和 WSGIRequest（for 整合測試）
+        # ✅ 接收 user_input（可選）
+        user_input = request.data.get("user_input", "").lower().strip()
+
         if hasattr(request, 'data'):
             req_type = request.data.get('type')
             restaurants = request.data.get('restaurants', [])
@@ -130,6 +132,66 @@ class GenerateRecommendReasonView(APIView):
                 "data": None,
                 "message": "請提供 type='restaurant_list' 且包含 restaurants 清單"
             }, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ 預先定義語意補強規則
+        user_input_rules = {
+            # 🍃 飲食偏好
+            "吃素": "素食需求",
+            "素食": "素食需求",
+            "怕辣": "避免辛辣料理",
+            "不吃辣": "避免辛辣料理",
+            "不想太油": "清爽口味",
+            "清爽": "清爽口味",
+            "太油": "清爽口味",
+            "油膩": "清爽口味",
+
+            # 👪 用餐場合
+            "朋友聚餐": "適合朋友聚會",
+            "同學聚餐": "適合朋友聚會",
+            "聚餐": "適合聚餐",
+            "家庭聚餐": "適合家庭聚會",
+            "帶爸媽": "適合家庭聚會",
+            "爸媽": "適合家庭聚會",
+            "家人吃飯": "適合家庭聚會",
+            "約會": "氣氛佳，適合約會",
+            "商務": "適合正式聚會",
+            "請客": "適合正式聚會",
+            "正式": "適合正式聚會",
+            "慶生": "適合慶祝場合",
+            "生日": "適合慶祝場合",
+            "慶祝": "適合慶祝場合",
+            "小孩": "親子友善",
+            "兒童": "親子友善",
+
+            # 💰 預算
+            "不貴": "價格實惠",
+            "便宜": "價格實惠",
+            "平價": "價格實惠",
+            "價格實惠": "價格實惠",
+            "高級": "精緻高價",
+            "高價": "精緻高價",
+            "高端": "精緻高價",
+            "精緻": "精緻高價",
+
+            # ⏰ 時段
+            "宵夜": "適合宵夜",
+            "深夜": "適合宵夜",
+            "早午餐": "適合早午餐",
+            "早餐": "適合早餐",
+
+            # ⏱️ 狀態/時間
+            "時間不多": "快速方便",
+            "趕時間": "快速方便",
+            "快速吃": "快速方便",
+
+            # 🌶️ 重口味
+            "想吃辣": "重口味料理",
+            "重口味": "重口味料理",
+            "辣的料理": "重口味料理",
+            "麻辣": "重口味料理",
+            "辣鍋": "重口味料理",
+        }
+
 
         results = []
 
@@ -183,13 +245,12 @@ class GenerateRecommendReasonView(APIView):
             if district:
                 extra_reasons.append(f"位於{district}")
 
-            # 🔍 補強理由：features / style / opening_hours
+            # features / style / hours
             features = restaurant.get("features", [])
             style = restaurant.get("style", "")
             opening_hours = restaurant.get("opening_hours", "")
 
-            # ➕ features 補強
-            feature_keywords_map = {
+            feature_map = {
                 "甜點專門": "甜點評價高",
                 "氣氛佳": "氣氛佳",
                 "聚餐推薦": "適合聚餐",
@@ -201,21 +262,19 @@ class GenerateRecommendReasonView(APIView):
                 "異國料理": "異國風味"
             }
             for f in features:
-                if f in feature_keywords_map:
-                    extra_reasons.append(feature_keywords_map[f])
+                if f in feature_map:
+                    extra_reasons.append(feature_map[f])
 
-            # ➕ style 補強
-            style_keywords_map = {
+            style_map = {
                 "文青": "文青風格",
                 "美式": "美式風格",
                 "日式": "日式風格",
                 "夜貓族": "適合夜貓子",
                 "東南亞風": "東南亞風格"
             }
-            if style in style_keywords_map:
-                extra_reasons.append(style_keywords_map[style])
+            if style in style_map:
+                extra_reasons.append(style_map[style])
 
-            # ➕ opening_hours 補強
             if opening_hours:
                 if "00" in opening_hours or "02" in opening_hours:
                     extra_reasons.append("夜間營業")
@@ -223,6 +282,12 @@ class GenerateRecommendReasonView(APIView):
                     extra_reasons.append("適合宵夜")
                 if "全天" in opening_hours:
                     extra_reasons.append("全天營業")
+
+            # ✅ ➕ user_input 語意補強
+            if user_input:
+                for keyword, reason in user_input_rules.items():
+                    if keyword in user_input:
+                        extra_reasons.append(reason)
 
             # 結構化推薦理由
             reason_summary = {
@@ -262,6 +327,7 @@ class GenerateRecommendReasonView(APIView):
             },
             "message": "推薦理由已產生"
         }, status=status.HTTP_200_OK)
+    
 
 # 功能 3-1：模糊語句提示（最終優化版）
 class GeneratePromptView(APIView):
@@ -522,6 +588,7 @@ class GenerateCardDataView(APIView):
             "message": "卡片欄位資料已產生"
         }, status=status.HTTP_200_OK)
 
+
 # ✅ 整合測試：功能一 → 四 → 二（修正版）
 
 class IntegrationTestView(APIView):
@@ -601,7 +668,8 @@ class IntegrationTestView(APIView):
         # ✅ Step 4：功能二（推薦理由補強）
         request_reason = factory.post("/fake_path/", {
             "type": "restaurant_list",
-            "restaurants": card_restaurants
+            "restaurants": card_restaurants,
+            "user_input": input_text  # ✅ 傳入使用者輸入文字
         }, format='json')
         wrapped_reason_request = Request(request_reason, parsers=[JSONParser()])  # ✅ 加上 parsers
         final_response = GenerateRecommendReasonView().post(wrapped_reason_request)
@@ -621,5 +689,6 @@ class IntegrationTestView(APIView):
             "data": final_results,
             "message": "整合流程已執行完成"
         }, status=status.HTTP_200_OK)
+
 
 
