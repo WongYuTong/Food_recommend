@@ -18,8 +18,8 @@ from post.forms import PostCreateForm, CommentForm
 from django.conf import settings
 from collections import Counter
 from django.db.models.functions import TruncMonth
-
 from datetime import datetime
+from django.urls import reverse
 
 # 登入 / 註冊 / 個人資料 / 編輯個人資料 / 公開個人頁面
 # 貼文 / 收藏 / 追蹤 / 動態牆 / 探索 / 貼文詳情 + 留言 + 表情反應
@@ -240,8 +240,41 @@ def user_meal_dashboard(request):
         .order_by('-count')
     )
 
+    # 新增：每個縣市的用餐記錄（例如：每篇貼文的標題或內容）
+    def extract_city(address):
+        # 假設地址格式為「台北市中山區...」或「新北市板橋區...」
+        if address:
+            for city in ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "基隆市", "新竹市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣", "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "台東縣", "澎湖縣", "金門縣", "連江縣"]:
+                if city in address:
+                    return city
+        return "未知"
+    city_post_map = {}
+    MEAL_TIME_DISPLAY = {
+        'breakfast': '早餐',
+        'lunch': '午餐',
+        'afternoon_tea': '下午茶',
+        'dinner': '晚餐',
+        'late_night': '消夜',
+    }
+
+    
+    for p in posts:
+        city = extract_city(p.location_address)
+        if city not in city_post_map:
+            city_post_map[city] = []
+        meal_time_display = MEAL_TIME_DISPLAY.get(p.meal_time, '') if p.meal_time else ''
+        city_post_map[city].append({
+            "id": p.id,
+            "title": p.title,
+            "content": p.content,
+            "dining_date": p.dining_date.strftime("%Y-%m-%d") if p.dining_date else "",
+            "meal_time": meal_time_display,
+            "url": reverse('post:view_post', args=[p.id]),  # 新增這行
+        })
+
     context = {
         "city_stats": dict(city_counter),
+        "city_posts": city_post_map,  # 新增這行
         "time_stats": list(time_stats),
         "type_stats_month": list(type_stats_month),
         "type_stats_year": list(type_stats_year),
