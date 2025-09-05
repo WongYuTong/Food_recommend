@@ -16,11 +16,12 @@ def test_negative_condition_extraction():
     print(colored("🎯 功能一：反向推薦條件擷取 測試開始", "cyan"))
     print("--------------------------------------------------")
 
-    success_count = 0  # 統計通過數量
+    success_count = 0
+    fail_count = 0
 
     for idx, item in enumerate(NEGATIVE_INPUTS):
         text = item["text"]
-        expected = item["expected"]
+        expected = sorted(item["expected"])
 
         payload = {
             "type": "text",
@@ -35,26 +36,40 @@ def test_negative_condition_extraction():
             print("🔁 回傳狀態碼:", response.status_code)
 
             if result.get("status") == "success" and isinstance(result.get("data", {}).get("excluded"), list):
-                excluded_items = result["data"]["excluded"]
+                excluded_items = sorted(result["data"]["excluded"])
 
-                # 自動比對結果是否一致
                 if set(excluded_items) == set(expected):
                     print(colored(f"✅ 擷取成功，排除項目：{excluded_items}", "green"))
                     success_count += 1
                 else:
+                    fail_count += 1
                     print(colored("❌ 擷取不一致", "red"))
                     print(f"   預期值：{expected}")
                     print(f"   實際值：{excluded_items}")
+
+                    # 額外提示差異
+                    missing = set(expected) - set(excluded_items)
+                    extra = set(excluded_items) - set(expected)
+
+                    if missing:
+                        print(colored(f"   🔍 少擷取：{list(missing)}", "yellow"))
+                    if extra:
+                        print(colored(f"   ⚠️ 多擷取：{list(extra)}", "magenta"))
+
             else:
+                fail_count += 1
                 print(colored("❌ 擷取失敗或格式異常", "red"))
                 print("回傳內容：", result)
 
         except Exception as e:
+            fail_count += 1
             print(colored(f"🚨 發生錯誤：{e}", "red"))
 
         print("--------------------------------------------------")
 
-    print(colored(f"\n📊 測試完成：共 {success_count}/{len(NEGATIVE_INPUTS)} 筆通過\n", "cyan"))
+    print(colored(f"\n📊 測試完成：共 {success_count + fail_count} 筆", "cyan"))
+    print(colored(f"✅ 通過：{success_count}", "green"))
+    print(colored(f"❌ 失敗：{fail_count}\n", "red"))
 
 if __name__ == "__main__":
     test_negative_condition_extraction()
