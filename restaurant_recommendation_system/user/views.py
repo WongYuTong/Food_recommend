@@ -20,6 +20,8 @@ from collections import Counter
 from django.db.models.functions import TruncMonth
 from datetime import datetime
 from django.urls import reverse
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 
 # 登入 / 註冊 / 個人資料 / 編輯個人資料 / 公開個人頁面
 # 貼文 / 收藏 / 追蹤 / 動態牆 / 探索 / 貼文詳情 + 留言 + 表情反應
@@ -121,33 +123,47 @@ def logout_view(request):
 def profile(request):
     user_profile = request.user.profile
     posts = Post.objects.filter(user=request.user).order_by('-created_at')
-    
+
     if request.method == 'POST':
         u_form = UserUpdateForm(request.POST, instance=request.user)
         p_form = ProfileUpdateForm(request.POST, request.FILES, instance=user_profile)
-        
-        if u_form.is_valid() and p_form.is_valid():
-            u_form.save()
-            p_form.save()
-            messages.success(request, '您的個人資料已更新！')
-            return redirect('profile')
+        pwd_form = PasswordChangeForm(request.user, request.POST) if 'old_password' in request.POST else PasswordChangeForm(request.user)
+
+        # 判斷是哪個表單送出
+        if 'old_password' in request.POST:
+            # 處理密碼變更
+            if pwd_form.is_valid():
+                user = pwd_form.save()
+                update_session_auth_hash(request, user)  # 重要！避免登出
+                messages.success(request, '密碼已成功變更！')
+                return redirect('profile')
+            else:
+                u_form = UserUpdateForm(instance=request.user)
+                p_form = ProfileUpdateForm(instance=user_profile)
+        else:
+            # 處理一般資料變更
+            if u_form.is_valid() and p_form.is_valid():
+                u_form.save()
+                p_form.save()
+                messages.success(request, '您的個人資料已更新！')
+                return redirect('profile')
+            pwd_form = PasswordChangeForm(request.user)
     else:
         u_form = UserUpdateForm(instance=request.user)
         p_form = ProfileUpdateForm(instance=user_profile)
-    
+        pwd_form = PasswordChangeForm(request.user)
+
     # 獲取用戶發布的貼文，按置頂和時間排序
     posts = Post.objects.filter(user=request.user).order_by('-is_pinned', '-created_at')
-    
+
     context = {
         'u_form': u_form,
         'p_form': p_form,
-        'posts': posts
-    }
-    
-    return render(request, 'user/profile.html', {
+        'pwd_form': pwd_form,
         'user_profile': user_profile,
         'posts': posts,
-    })
+    }
+    return render(request, 'user/profile.html', context)
 
 # 公開用戶個人頁面
 def public_profile(request, username):
