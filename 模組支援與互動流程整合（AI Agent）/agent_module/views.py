@@ -14,21 +14,34 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import status
-from rest_framework.test import APIRequestFactory  # ✅ 新增這行
+from rest_framework.test import APIRequestFactory
 from rest_framework.request import Request
 from rest_framework.parsers import JSONParser
 
-# 本地 utils（共用邏輯）
+# 🔧 共用工具
+from .utils_common import normalize_text  # ✅ 統一改從這裡匯入
+
+# 🧩 功能一：條件分析
+from .utils_semantic import extract_negative_phrases, split_conditions
+
+# 🧠 功能四：欄位補強
+from .utils_card_enhancer import enrich_restaurant_info
+
+# 📊 功能三-1：語意分級
+from .utils_prompt import analyze_prompt_level
+
+# 🧰 功能二 & 共用
 from .utils_card import (
-    generate_map_url,
-    format_open_status,
-    extract_district,
-    generate_price_description,
-    generate_recommend_reason
+    generate_map_url, format_open_status, generate_price_description,
+    extract_district, expand_exclusions, collect_blob,
+    deduplicate_semantic, uniq_keep_order, sort_reasons,
+    FEATURE_REASON_MAP, STYLE_REASON_MAP, USER_INPUT_RULES
 )
 
 
+
 # 功能 1：反向推薦條件擷取（強化版 v6 - 語意補強完全命中）
+
 class ExtractNegativeConditionsView(APIView):
     permission_classes = [AllowAny]
 
@@ -43,12 +56,7 @@ class ExtractNegativeConditionsView(APIView):
                 "message": "請提供 type='text' 且包含 text 欄位"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # --- 基本設定 ---
-        prefix = r'(?:我|不過|那就|可能)?'
-        negative_verbs = r'(不想吃|不想要|不要|不吃|別推薦|不要推薦|不太想吃|沒有很喜歡|那種我不愛|不會選|不太喜歡|不喜歡|不愛|我不會選|不考慮|無法接受)'
-        pattern = rf'{prefix}{negative_verbs}(.+?)(?:[，。!！,\.\s]|$)'
-        matches = re.findall(pattern, user_input)
-
+        # ✅ 保留你原本的常數設計
         FUNCTION_PREFIXES = ['推薦', '餐廳', '地方', '那家', '這家', '店家', '吃', '想吃', '提供']
         TAIL_PARTICLES = r'[的了呢啦啊嘛唷喔哦耶呀囉吧]*$'
         PRESERVE_TERMS = ['吃到飽', '早午餐', '宵夜', '套餐', '內用', '外帶']
@@ -56,47 +64,30 @@ class ExtractNegativeConditionsView(APIView):
         EXCLUSION_WHITELIST = ['辣妹', '辣個', '辣個女生', '火辣的音樂']
         BLACKLIST_SUFFIX = ['那種', '這種']
 
+        # ✅ 語意映射表（完全保留）
         SEMANTIC_NEGATIVE_MAP = {
-            "太油": "油膩",
-            "很油": "油膩",
-            "油膩": "油膩",
-            "太膩": "油膩",
-            "吃完會膩": "油膩",
-            "甜到膩": "甜膩",
-            "太貴": "高價",
-            "價格太高": "高價",
-            "CP 值太低": "高價",
-            "份量少又貴": "高價",
-            "不夠飽": "份量少",
-            "太吵": "吵雜",
-            "很吵": "吵雜",
-            "太擠": "擁擠",
-            "不太乾淨": "不乾淨",
-            "衛生不好": "不乾淨",
-            "不乾淨": "不乾淨",
-            "太鹹": "重口味",
-            "太辣": "重口味",
-            "太鹹太辣": "重口味",
-            "太多醬": "醬多",
-            "太多醬的": "醬多",
-            "雷": "雷店",
-            "有點雷": "雷店",
-            "雷店": "雷店",
-            "太文青": "文青風格",
-            "這種太文青的": "文青風格",
-            "網美店": "網美店",
-            "打卡店": "網美店",
-            "Instagram 打卡": "網美店"
+            "太油": "油膩", "很油": "油膩", "油膩": "油膩", "太膩": "油膩", "吃完會膩": "油膩",
+            "甜到膩": "甜膩", "太貴": "高價", "價格太高": "高價", "CP 值太低": "高價",
+            "份量少又貴": "高價", "不夠飽": "份量少", "太吵": "吵雜", "很吵": "吵雜",
+            "太擠": "擁擠", "不太乾淨": "不乾淨", "衛生不好": "不乾淨", "不乾淨": "不乾淨",
+            "太鹹": "重口味", "太辣": "重口味", "太鹹太辣": "重口味",
+            "太多醬": "醬多", "太多醬的": "醬多", "雷": "雷店", "有點雷": "雷店",
+            "雷店": "雷店", "太文青": "文青風格", "這種太文青的": "文青風格",
+            "網美店": "網美店", "打卡店": "網美店", "Instagram 打卡": "網美店"
         }
 
         excluded_items = []
 
-        for match in matches:
-            phrase = match[1] if isinstance(match, tuple) and len(match) > 1 else match[0] if isinstance(match, tuple) else match
-            split_words = re.split(r'[,、，和跟以及或還有\s]+', phrase)
+        # ✅ 1. 句子匹配
+        matches = extract_negative_phrases(user_input)
 
-            for word in split_words:
-                word = word.strip()
+        # ✅ 2. 抽詞與清洗
+        for phrase in matches:
+            if isinstance(phrase, tuple):
+                phrase = phrase[1] if len(phrase) > 1 else phrase[0]
+            words = split_conditions(phrase)
+
+            for word in words:
                 if not word or word in EXCLUSION_WHITELIST or word in BLACKLIST_SUFFIX:
                     continue
 
@@ -119,10 +110,12 @@ class ExtractNegativeConditionsView(APIView):
                 if cleaned and len(cleaned) <= 6 and re.match(r'^[\u4e00-\u9fffA-Za-z0-9]+$', cleaned):
                     excluded_items.append(cleaned)
 
+        # ✅ 3. 額外語意補強
         for phrase, keyword in SEMANTIC_NEGATIVE_MAP.items():
             if phrase in user_input and keyword not in excluded_items:
                 excluded_items.append(keyword)
 
+        # ✅ 4. 最終正規化與去重
         final_excluded = []
         for kw in excluded_items:
             normalized = SEMANTIC_NEGATIVE_MAP.get(kw, kw)
@@ -138,17 +131,16 @@ class ExtractNegativeConditionsView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+
 # 功能 2：推薦理由補強 + 結構化輸出（強化版：去重與排序 + 保底排除閘門）
 class GenerateRecommendReasonView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        from collections import OrderedDict
-        import re, json
+        import json
 
-        DEBUG = True  # 想關閉終端 debug 印出就設為 False
+        DEBUG = True
 
-        # ✅ 接收 user_input（可選）與上游傳入的 excluded_items（可選）
         user_input = (request.data.get("user_input", "") if hasattr(request, "data") else "").lower().strip()
         req_excluded_items = (request.data.get("excluded_items", []) if hasattr(request, "data") else []) or []
 
@@ -169,88 +161,40 @@ class GenerateRecommendReasonView(APIView):
                 "message": "請提供 type='restaurant_list' 且包含 restaurants 清單"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # ======================
-        # 🛡️ 保底排除閘門（關鍵修正）
-        def _normalize(s: str) -> str:
-            if not isinstance(s, str):
-                return ""
-            s = s.strip().lower()
-            s = re.sub(r"[，,。.!？?、/\\|()\[\]【】{}\-＿_~^'\"`：:；;@#*$＋+＝=．·･\s]+", "", s)
-            return s
-
-        def _extract_negatives(text: str) -> list:
+        # ========== 保底排除機制 ==========
+        def extract_negatives(text: str) -> list:
+            import re
             if not text:
                 return []
-            # 1) 把否定詞擷取式子改成：分隔符後面一定要跟詞
-            neg_pat = re.compile(
+            pattern = re.compile(
                 r"(?:不想吃|不想要|不要|不吃|別推薦|不要推薦)\s*"
                 r"([^\n，,。！!？?\s]+(?:(?:[、,/和與及或]|或是|[,，/ ])+[^\n，,。！!？?\s]+)*)"
             )
-            m = neg_pat.search(text)
+            m = pattern.search(text)
             if not m:
                 return []
             seg = m.group(1)
-            # 2) 分詞器維持你新加的版本即可（OK）
             parts = re.split(r"(?:[、,/和與及或]|或是|[,，\s])+", seg)
             return [p.strip() for p in parts if p.strip()]
 
-        def _expand_exclusions(items: list) -> list:
-            mapping = {
-                "甜點": ["甜點", "甜品", "甜食", "蛋糕", "烘焙", "下午茶", "甜點店", "甜點專門", "甜點評價高"],
-                "拉麵": ["拉麵", "ramen"],
-                "燒烤": ["燒烤", "烤肉", "炭火", "燒肉"],
-                "漢堡": ["漢堡", "burger"],
-                "美式": ["美式", "美式餐廳", "美式風格", "美式漢堡"],
-                "火鍋": ["火鍋", "鍋物", "涮涮鍋", "麻辣鍋"],
-            }
-            expanded = set()
-            for it in items or []:
-                raw = (it or "").strip()
-                norm = _normalize(raw)
-                if not norm:
-                    continue
-                candidates = set([raw, norm])
-                for key, syns in mapping.items():
-                    if key == raw or key == norm:
-                        candidates |= set(syns)
-                for c in candidates:
-                    expanded.add(_normalize(c))
-            return list(expanded)
+        extracted_from_input = extract_negatives(user_input)
+        raw_excluded = list({x for x in (req_excluded_items + extracted_from_input) if x})
+        expanded_ex = set(expand_exclusions(raw_excluded))
 
-        def _collect_blob(r: dict) -> str:
-            parts = []
-            for k in ["name", "highlight", "ai_reason", "comment_summary", "style", "address"]:
-                v = r.get(k, "")
-                if v:
-                    parts.append(str(v))
-            for lk in ["matched_tags", "tags", "features"]:
-                seq = r.get(lk) or []
-                parts.extend([str(t) for t in seq])
-            return _normalize("｜".join(parts))
-
-        extracted_from_input = _extract_negatives(user_input)
-        raw_excluded = []
-        for x in req_excluded_items + extracted_from_input:
-            if x and x not in raw_excluded:
-                raw_excluded.append(x)
-
-        expanded_ex = set(_expand_exclusions(raw_excluded))
-        if DEBUG: print("🧩(功能二) 擴充後排除詞：", sorted(expanded_ex))
+        if DEBUG:
+            print("🧩 擴充後排除詞：", sorted(expanded_ex))
 
         filtered_restaurants = []
         debug_hits = []
         for r in restaurants:
-            blob = _collect_blob(r)
-            hit = None
-            for ex in expanded_ex:
-                if ex and ex in blob:
-                    hit = ex
-                    break
+            blob = collect_blob(r)
+            hit = next((ex for ex in expanded_ex if ex in blob), None)
             if hit:
                 debug_hits.append((r.get("name", ""), hit))
-                continue
-            filtered_restaurants.append(r)
+            else:
+                filtered_restaurants.append(r)
 
+        # fallback：若一間都沒剔除，再檢查 name
         if len(filtered_restaurants) == len(restaurants) and raw_excluded:
             tmp = []
             for r in filtered_restaurants:
@@ -261,82 +205,39 @@ class GenerateRecommendReasonView(APIView):
                     tmp.append(r)
             filtered_restaurants = tmp
 
-        if DEBUG: print("🔎(功能二) 被排除清單/命中詞：", debug_hits)
+        if DEBUG:
+            print("🔎 被排除清單/命中詞：", debug_hits)
 
         restaurants = filtered_restaurants
-        # ======================
-
-        # ✅ 語意補強規則（原樣保留）
-        user_input_rules = {
-            "吃素": "素食需求", "素食": "素食需求",
-            "怕辣": "避免辛辣料理", "不吃辣": "避免辛辣料理",
-            "不想太油": "清爽口味", "清爽": "清爽口味", "太油": "清爽口味", "油膩": "清爽口味",
-            "朋友聚餐": "適合朋友聚會", "同學聚餐": "適合朋友聚會", "聚餐": "適合聚餐",
-            "家庭聚餐": "適合家庭聚會", "帶爸媽": "適合家庭聚會", "爸媽": "適合家庭聚會", "家人吃飯": "適合家庭聚會",
-            "約會": "氣氛佳，適合約會", "商務": "適合正式聚會", "請客": "適合正式聚會", "正式": "適合正式聚會",
-            "慶生": "適合慶祝場合", "生日": "適合慶祝場合", "慶祝": "適合慶祝場合",
-            "小孩": "親子友善", "兒童": "親子友善",
-            "不貴": "價格實惠", "便宜": "價格實惠", "平價": "價格實惠", "價格實惠": "價格實惠",
-            "高級": "精緻高價", "高價": "精緻高價", "高端": "精緻高價", "精緻": "精緻高價",
-            "宵夜": "適合宵夜", "深夜": "適合宵夜", "早午餐": "適合早午餐", "早餐": "適合早餐",
-            "時間不多": "快速方便", "趕時間": "快速方便", "快速吃": "快速方便",
-            "想吃辣": "重口味料理", "重口味": "重口味料理", "辣的料理": "重口味料理", "麻辣": "重口味料理", "辣鍋": "重口味料理",
-        }
-
-        # ✅ 保序去重（用在 tags）
-        def uniq_keep_order(items):
-            seen = set()
-            out = []
-            for it in items:
-                if it not in seen:
-                    seen.add(it)
-                    out.append(it)
-            return out
-
-        # ✅ 語意去重 + 排序（原樣保留）
-        def deduplicate_semantic(phrases):
-            cleaned = []
-            seen = set()
-            phrases_sorted = sorted(phrases, key=lambda x: -len(x))
-            for p in phrases_sorted:
-                if all(p not in s for s in seen):
-                    cleaned.append(p)
-                    seen.add(p)
-            return list(OrderedDict.fromkeys(cleaned))
-
-        def sort_reasons(reason_list):
-            priority = [
-                "素食", "辛辣", "清爽", "重口味",
-                "評價", "熱門", "氣氛",
-                "價格", "CP", "高價", "便宜",
-                "地點", "位於",
-                "聚餐", "約會", "家庭", "宵夜", "早餐", "慶祝", "親子",
-                "風格", "營業", "夜貓"
-            ]
-            return sorted(reason_list, key=lambda r: next((i for i, p in enumerate(priority) if p in r), len(priority)))
+        # ==================================
 
         results = []
-
-        for restaurant in restaurants:
-            name = restaurant.get('name', '')
-            rating = restaurant.get('rating', 0)
-            address = restaurant.get('address', '')
-            is_open_raw = restaurant.get('is_open', None)
-            ai_reason = restaurant.get('ai_reason', '')
-            comment_summary = restaurant.get('comment_summary', '')
-            highlight = restaurant.get('highlight', '')
-            matched_tags = restaurant.get('matched_tags', [])
-            distance_m = restaurant.get('distance_m', None)
-            distance = f"{distance_m} 公尺" if distance_m else "未知"
-            reason_score = restaurant.get('reason_score', 0)
-            price_level = restaurant.get('price_level', '')
-            review_count = restaurant.get('review_count', None)
+        for r in restaurants:
+            name = r.get('name', '')
+            address = r.get('address', '')
+            rating = r.get('rating', 0)
+            is_open_raw = r.get('is_open')
+            price_level = r.get('price_level', '')
+            review_count = r.get('review_count')
+            distance_m = r.get('distance_m')
+            reason_score = r.get('reason_score', 0)
 
             map_url = generate_map_url(name)
             is_open = format_open_status(is_open_raw)
             price_desc = generate_price_description(price_level)
             district = extract_district(address)
+            distance = f"{distance_m} 公尺" if distance_m else "未知"
 
+            highlight = r.get('highlight', '')
+            matched_tags = r.get('matched_tags', [])
+            features = r.get('features', [])
+            style = r.get('style', '')
+            opening_hours = r.get('opening_hours', '')
+
+            ai_reason = r.get('ai_reason', '')
+            comment_summary = r.get('comment_summary', '')
+
+            # 核心推薦理由
             reason_source = "inference"
             if ai_reason:
                 core_reason = ai_reason
@@ -354,6 +255,7 @@ class GenerateRecommendReasonView(APIView):
                     core_reasons.append("整體評價不錯")
                 core_reason = "、".join(core_reasons)
 
+            # 補強推薦關鍵字
             extra_reasons = []
             if highlight:
                 extra_reasons.append(highlight)
@@ -363,36 +265,11 @@ class GenerateRecommendReasonView(APIView):
                 extra_reasons.append(price_desc)
             if district:
                 extra_reasons.append(f"位於{district}")
-
-            features = restaurant.get("features", [])
-            style = restaurant.get("style", "")
-            opening_hours = restaurant.get("opening_hours", "")
-
-            feature_map = {
-                "甜點專門": "甜點評價高",
-                "氣氛佳": "氣氛佳",
-                "聚餐推薦": "適合聚餐",
-                "高 CP 值": "高 CP 值",
-                "價格便宜": "價格實惠",
-                "價格親民": "價格實惠",
-                "人氣餐廳": "熱門店家",
-                "宵夜好選擇": "適合宵夜",
-                "異國料理": "異國風味"
-            }
             for f in features:
-                if f in feature_map:
-                    extra_reasons.append(feature_map[f])
-
-            style_map = {
-                "文青": "文青風格",
-                "美式": "美式風格",
-                "日式": "日式風格",
-                "夜貓族": "適合夜貓子",
-                "東南亞風": "東南亞風格"
-            }
-            if style in style_map:
-                extra_reasons.append(style_map[style])
-
+                if f in FEATURE_REASON_MAP:
+                    extra_reasons.append(FEATURE_REASON_MAP[f])
+            if style in STYLE_REASON_MAP:
+                extra_reasons.append(STYLE_REASON_MAP[style])
             if opening_hours:
                 if "00" in opening_hours or "02" in opening_hours:
                     extra_reasons.append("夜間營業")
@@ -400,25 +277,17 @@ class GenerateRecommendReasonView(APIView):
                     extra_reasons.append("適合宵夜")
                 if "全天" in opening_hours:
                     extra_reasons.append("全天營業")
-
             if user_input:
-                for keyword, reason in user_input_rules.items():
-                    if keyword in user_input:
-                        extra_reasons.append(reason)
+                for k, v in USER_INPUT_RULES.items():
+                    if k in user_input:
+                        extra_reasons.append(v)
 
-            # ✅ 語意去重 + 分類排序
-            extra_reasons_cleaned = deduplicate_semantic(extra_reasons)
-            extra_reasons_sorted = sort_reasons(extra_reasons_cleaned)
+            # ✅ 語意去重 + 排序
+            clean_reasons = deduplicate_semantic(extra_reasons)
+            sorted_reasons = sort_reasons(clean_reasons)
+            full_reason = "、".join([core_reason] + sorted_reasons)
 
-            reason_summary = {
-                "source": reason_source,
-                "core": core_reason,
-                "extra": extra_reasons_sorted
-            }
-            full_reason = "、".join([core_reason] + extra_reasons_sorted)
-
-            # ✅ tags：保序去重（避免 set 打亂順序）
-            combined_tags = uniq_keep_order(list(matched_tags) + list(extra_reasons_sorted))
+            tags = uniq_keep_order(list(matched_tags) + list(sorted_reasons))
 
             results.append({
                 "name": name,
@@ -427,13 +296,17 @@ class GenerateRecommendReasonView(APIView):
                 "price_level": price_level,
                 "review_count": review_count,
                 "highlight": highlight,
-                "tags": combined_tags,
+                "tags": tags,
                 "matched_tags": matched_tags,
                 "is_open": is_open,
                 "distance": distance,
                 "reason_score": reason_score,
                 "map_url": map_url,
-                "reason_summary": reason_summary,
+                "reason_summary": {
+                    "source": reason_source,
+                    "core": core_reason,
+                    "extra": sorted_reasons
+                },
                 "recommend_reason": full_reason
             })
 
@@ -450,7 +323,7 @@ class GenerateRecommendReasonView(APIView):
             },
             "message": "推薦理由已產生"
         }, status=status.HTTP_200_OK)
-    
+
 
 # 功能 3-1：模糊語句提示（最終優化版）
 class GeneratePromptView(APIView):
@@ -467,34 +340,8 @@ class GeneratePromptView(APIView):
                 "message": "請提供 type='text' 且包含 text 欄位"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # 模糊語句依照程度分類（可擴充）
-        vague_patterns = {
-            "vague": [
-                "隨便", "你決定", "不知道", "不清楚", "沒意見", "沒想吃的", "不知道吃什麼", "不確定", "沒靈感", "隨你"
-            ],
-            "medium": [
-                "都可以", "無所謂", "你看著辦", "你幫我選", "再說吧", "看心情", "看著辦", "可以啊都行", "沒關係"
-            ],
-            "slight": [
-                "沒想法", "還沒想好", "沒特別想吃", "還不知道吃什麼", "需要想一下", "再看看", "再想想"
-            ]
-        }
-
-
-        level = "clear"
-        guidance = "歡迎告訴我們今天想吃什麼，或也可以提供不想吃的類型，我們會幫你挑選適合的餐廳！"
-
-        # 遍歷所有模糊等級，依序比對
-        for current_level, keywords in vague_patterns.items():
-            if any(keyword in user_input for keyword in keywords):
-                level = current_level
-                if level == "slight":
-                    guidance = "今天想吃點簡單的還是來點特別的呢？幾個方向幫你發想一下～"
-                elif level == "medium":
-                    guidance = "那你偏好什麼類型？或有不喜歡的料理嗎？我們可以幫你排除一部分喔！"
-                elif level == "vague":
-                    guidance = "可以先從『不想吃什麼』開始講起唷～像是不吃辣、不吃炸物之類的都可以說出來！"
-                break
+        # ✅ 呼叫 utils 中的分析邏輯
+        level, guidance = analyze_prompt_level(user_input)
 
         return Response({
             "status": "success",
@@ -505,9 +352,7 @@ class GeneratePromptView(APIView):
             "message": "模糊語句提示已產生"
         }, status=status.HTTP_200_OK)
 
-
-# 功能 3-2：互動式語句引導建議（最終強化版2）
-
+# 功能 3-2：互動式語句引導建議（重構版）
 class SuggestInputGuidanceView(APIView):
     permission_classes = [AllowAny]
 
@@ -525,14 +370,8 @@ class SuggestInputGuidanceView(APIView):
         summary = []
         default_guidance = "您可以輸入想吃的類型、場合、預算等資訊，我們會給您更好的建議！"
 
-        # ✅ 特殊處理：排除語句 + 特定料理
-        exclusion_phrases = ['不想吃', '不吃', '不要']
-        cuisine_phrases = ['甜點', '拉麵', '日式', '韓式', '中式', '義式', '義大利麵', '美式', '漢堡', '燒烤', '火鍋']
-        if any(p in user_input for p in exclusion_phrases) and any(c in user_input for c in cuisine_phrases):
-            summary.append({"type": "排除語句", "message": "已排除特定料理類型，可推薦其他選項"})
-
-        # ✅ 通用語意分類規則
-        rules = [
+        # 🧠 規則定義（分類、關鍵字、回應）
+        RULES = [
             ("飲食偏好", ['不吃辣', '怕辣', '我不吃辣'], '已排除辣味選項，推薦清爽、湯品等溫和口味'),
             ("飲食偏好", ['不吃牛', '我不吃牛'], '已排除牛肉餐點，可推薦雞肉、海鮮或蔬食'),
             ("飲食偏好", ['不吃海鮮', '海鮮過敏'], '已排除海鮮餐廳，推薦其他類型'),
@@ -567,15 +406,25 @@ class SuggestInputGuidanceView(APIView):
             ("飲食狀態", ['清淡', '不想太油', '吃清爽的'], '推薦清爽或湯品類型，適合口味較淡的需求'),
         ]
 
-        for category, keywords, response_text in rules:
-            if any(keyword in user_input for keyword in keywords):
-                summary.append({"type": category, "message": response_text})
+        # ✅ 共用判斷函式
+        def match_any(keywords: list, text: str) -> bool:
+            return any(k in text for k in keywords)
+
+        # ✅ 先檢查排除語句 + 特定料理類型
+        if match_any(['不想吃', '不吃', '不要'], user_input) and match_any(
+            ['甜點', '拉麵', '日式', '韓式', '中式', '義式', '義大利麵', '美式', '漢堡', '燒烤', '火鍋'], user_input):
+            summary.append({"type": "排除語句", "message": "已排除特定料理類型，可推薦其他選項"})
+
+        # ✅ 規則比對邏輯
+        for category, keywords, message in RULES:
+            if match_any(keywords, user_input):
+                summary.append({"type": category, "message": message})
 
         if not summary:
             summary.append({"type": "其他", "message": default_guidance})
 
         guidance_combined = "；".join([item["message"] for item in summary])
-        levels = list({item["type"] for item in summary})  # 去重類別
+        levels = list({item["type"] for item in summary})
 
         return Response({
             "status": "success",
@@ -588,13 +437,13 @@ class SuggestInputGuidanceView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# 功能 4：推薦卡片欄位模擬輸出（重構版）
 
-# 功能 4：推薦卡片欄位模擬輸出(強化版)
 class GenerateCardDataView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        # ✅ 保險處理：兼容 DRF Request 和 WSGIRequest（整合測試用）
+        # ✅ 支援 JSON 格式的安全處理
         if hasattr(request, 'data'):
             req_type = request.data.get('type')
             restaurants = request.data.get('restaurants', [])
@@ -612,96 +461,8 @@ class GenerateCardDataView(APIView):
                 "message": "請提供 type='restaurant_list' 且包含 restaurants 清單"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        results = []
-
-        for restaurant in restaurants:
-            name = restaurant.get('name', '')
-            rating = restaurant.get('rating', 0)
-            address = restaurant.get('address', '')
-            price_level = restaurant.get('price_level', '')
-            review_count = restaurant.get('review_count', 0)
-            is_open_raw = restaurant.get('is_open', None)
-            matched_tags = restaurant.get('matched_tags', [])
-            ai_reason = restaurant.get('ai_reason', '')
-            highlight = restaurant.get('highlight', '')
-            distance_m = restaurant.get('distance_m', random.randint(100, 2000))
-            distance = f"{distance_m} 公尺"
-
-            # 共用處理邏輯
-            map_url = generate_map_url(name)
-            is_open = format_open_status(is_open_raw)
-            district = extract_district(address)
-            price_desc = generate_price_description(price_level)
-
-            # 組合 tags
-            tags = list(set(matched_tags + ([district] if district else []) + ([price_desc] if price_desc else [])))
-
-            # highlight 補強
-            if not highlight:
-                if "甜點" in tags or "蛋糕" in name:
-                    highlight = "甜點評價高"
-                elif rating >= 4.5:
-                    highlight = "評價優良"
-                elif district and name not in ["泰式小館"]:
-                    highlight = "地點便利"
-                else:
-                    highlight = ""
-
-            # 推薦理由
-            recommend_reason = generate_recommend_reason(matched_tags, highlight, district, price_desc)
-
-            # 模擬 features（邏輯擴充）
-            features = []
-            if "素食" in tags:
-                features.append("提供素食")
-            if price_desc == "價格實惠":
-                features.append("高 CP 值")
-            if "甜點" in tags or "蛋糕" in name:
-                features.append("甜點專門")
-            if rating >= 4.5 and review_count >= 300:
-                features.append("人氣餐廳")
-            if price_level == "$":
-                features.append("價格便宜")
-            if "異國料理" in tags or "泰式" in name:
-                features.append("異國料理")
-
-            # 模擬 style（先處理夜貓，再看其他）
-            style = ""
-            if "泰式" in name or "東南亞" in tags:
-                style = "東南亞風"
-            elif "夜貓族" in tags or "夜貓" in name or "宵夜" in tags or distance_m > 1500:
-                style = "夜貓族"
-            elif "文青" in name or "咖啡" in name or "甜點" in tags:
-                style = "文青"
-            elif "燒肉" in name or "烤肉" in tags:
-                style = "美式"
-            elif "壽司" in name or "日式" in tags or "拉麵" in name:
-                style = "日式"
-
-            # 模擬營業時間與預留欄位
-            opening_hours = "11:00 - 21:00"
-            has_coupon = False
-            image_url = ""
-
-            results.append({
-                "name": name,
-                "rating": rating,
-                "address": address,
-                "tags": tags,
-                "highlight": highlight,
-                "distance": distance,
-                "distance_m": distance_m,
-                "review_count": review_count,
-                "price_level": price_level,
-                "is_open": is_open,
-                "map_url": map_url,
-                "features": features,
-                "style": style,
-                "opening_hours": opening_hours,
-                "recommend_reason": recommend_reason,
-                "has_coupon": has_coupon,
-                "image_url": image_url
-            })
+        # ✅ 呼叫補強邏輯
+        results = [enrich_restaurant_info(r) for r in restaurants]
 
         return Response({
             "status": "success",
@@ -710,6 +471,7 @@ class GenerateCardDataView(APIView):
             },
             "message": "卡片欄位資料已產生"
         }, status=status.HTTP_200_OK)
+
 
 
 # ✅ 整合測試：功能一 → 四 → 二（最終強化版，一次到位）
@@ -986,7 +748,4 @@ class IntegrationTestView(APIView):
             "excluded_items": excluded_items,
             "message": "整合流程已執行完成"
         }, status=status.HTTP_200_OK)
-
-
-
 

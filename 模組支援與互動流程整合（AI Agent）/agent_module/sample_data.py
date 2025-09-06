@@ -258,4 +258,52 @@ INTEGRATION_TEST_INPUTS = [
         "must_exclude_names": [],
         "allow_backfill": True,
     },
+
+    # 6. 禁用補位測試（確認只回傳過濾後的結果）
+    {
+        "text": "我不想吃甜點或燒烤",
+        "expected_keywords": [],
+        "expected_excludes": ["甜點", "燒烤"],
+        "min_results": 0,
+        "must_exclude_names": ["小確幸甜點店", "阿牛燒肉"],
+        "allow_backfill": False,
+    },
+
+    # 7. 輸入包含大量排除與偏好（長句測試）
+    {
+        "text": "我不吃火鍋、甜點、漢堡、燒烤，想找適合家庭聚會又不太貴的餐廳",
+        "expected_keywords": ["適合家庭聚會", "價格實惠"],
+        "expected_excludes": ["火鍋", "甜點", "漢堡", "燒烤"],
+        "must_exclude_names": ["小確幸甜點店", "阿牛燒肉"],
+        "min_results": 5,
+        "allow_backfill": True,
+    },
+
+    # 8. 測試空輸入（應回錯誤）
+    {
+        "text": "",
+        "expected_keywords": [],
+        "expected_excludes": [],
+        "min_results": 0,
+        "allow_backfill": False,
+    },
+
+    # 9. 測試只有偏好沒排除（純補強路徑）
+    {
+        "text": "想要地點方便、價格實惠，適合帶小孩",
+        "expected_keywords": ["價格實惠", "親子友善"],
+        "expected_excludes": [],
+        "min_results": 5,
+        "allow_backfill": True,
+    },
+
+    # 10. 極短輸入（邊界防呆測試）
+    {
+        "text": "辣",
+        "expected_keywords": [],
+        "expected_excludes": [],
+        "min_results": 5,
+        "allow_backfill": True,
+    },
+
 ]
