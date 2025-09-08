@@ -919,6 +919,27 @@ def report_user(request, user_id):
         'report_type': '用戶',
         'reported_item': reported_user
     })
+    
+@login_required
+def system_report(request):
+    if request.method == 'POST':
+        report_type = request.POST.get('report_type')
+        description = request.POST.get('description')
+        if report_type not in ['system', 'restaurant_info', 'other']:
+            messages.error(request, '請選擇正確的問題類型')
+            return redirect('system_report')
+        if not description:
+            messages.error(request, '請填寫詳細描述')
+            return redirect('system_report')
+        Report.objects.create(
+            reporter=request.user,
+            report_type=report_type,
+            reason=description
+        )
+        messages.success(request, '感謝您的回報，我們會盡快處理！')
+        return redirect('feed')
+    return render(request, 'report/system_report_form.html')    
+
 # ----------(用戶)通知系統 / 回報系統----------！！
 
 
@@ -1192,4 +1213,6 @@ def view_announcement(request, announcement_id):
         'announcement': announcement
     })
 # ----------(用戶)查看系統公告 / 查看單個系統公告詳細內容----------！！
+
+
 
