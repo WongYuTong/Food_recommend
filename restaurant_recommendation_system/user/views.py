@@ -305,6 +305,7 @@ def user_meal_dashboard(request):
 
 # 追蹤/取消追蹤用戶
 @login_required
+@login_required
 def toggle_follow(request, user_id):
     """追蹤或取消追蹤用戶"""
     user_to_follow = get_object_or_404(User, id=user_id)
@@ -335,12 +336,18 @@ def toggle_follow(request, user_id):
             message=f"{request.user.username} 開始追蹤了您"
         )
     
+    # 即時取得粉絲數與追蹤數
+    followers_count = Follow.objects.filter(followed=user_to_follow).count()
+    following_count = Follow.objects.filter(follower=user_to_follow).count()
+    
     # 如果是AJAX請求，返回JSON響應
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({
             'status': 'success',
             'is_following': is_following,
-            'message': message
+            'message': message,
+            'followers_count': followers_count,
+            'following_count': following_count,
         })
     
     # 否則重定向回上一頁
@@ -354,7 +361,7 @@ def followers(request):
     """顯示關注用戶的人"""
     followers = Follow.objects.filter(followed=request.user).select_related('follower')
     following = Follow.objects.filter(follower=request.user).select_related('followed')
-    return render(request, 'social/followers.html', {
+    return render(request, 'user/following.html', {
         'followers': followers,
         'following': following
     })
@@ -459,7 +466,7 @@ def following(request, user_id=None):
     
     following = user.following.all()
     
-    return render(request, 'social/following.html', {
+    return render(request, 'user/following.html', {
         'user': user,
         'following': following
     })
