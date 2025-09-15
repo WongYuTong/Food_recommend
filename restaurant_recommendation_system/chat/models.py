@@ -1,8 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# Create your models here.
-
+# 使用者與機器人訊息流
 class Message(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
@@ -30,6 +29,7 @@ class ChatHistory(models.Model):
     def __str__(self):
         return f"{self.user.username}: {self.title}"
 
+# 推薦結果（食物名、圖、時間）
 class Recommendation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     food_name = models.CharField(max_length=100)
@@ -40,7 +40,7 @@ class Recommendation(models.Model):
     def __str__(self):
         return self.food_name
 
-# 新增模型 - 支持即時美食推薦系統
+# 用戶總偏好
 class UserPreference(models.Model):
     """用戶美食偏好"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='food_preferences')
@@ -85,7 +85,7 @@ class QueryHistory(models.Model):
     def __str__(self):
         return f"{self.user.username}: {self.query_text[:50]}"
 
-# 新增使用者偏好詳細資料表
+# 細項偏好加分數
 class UserPreferenceDetail(models.Model):
     """使用者偏好詳細資料表"""
     id = models.AutoField(primary_key=True)
