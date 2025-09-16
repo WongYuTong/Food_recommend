@@ -2,6 +2,7 @@ import requests
 from django.db import models
 from restaurants.models import RestaurantIndicatorDetail, RestaurantIndicatorSummary
 from user.models import UserPreferenceDetail, UserPreferenceSummary
+from django.db.models import Sum, Count, Q
 
 def call_fastapi_analyze_restaurant(post_id, content, place_id=None):
     url = "http://localhost:8001/analyze/restaurant/"
@@ -71,7 +72,7 @@ def analyze_and_save_user_preference(post, logger=None):
             UserPreferenceDetail.objects.update_or_create(
                 user=post.user,
                 keyword=food,
-                preference_type="mention",  # 或 "mention"
+                preference_type="mention",
                 source="post",
                 source_id=post.id,
                 defaults={
@@ -79,23 +80,43 @@ def analyze_and_save_user_preference(post, logger=None):
                     "frequency": 1,
                 }
             )
+        # 新增這一行，確保總表即時更新
+        update_user_preference_summary(post.user)
     return result
 
 def update_user_preference_summary(user):
-    # 統計每個 keyword 出現次數
-    details = UserPreferenceDetail.objects.filter(user=user)
-    keyword_counts = {}
-    for d in details:
-        keyword_counts[d.keyword] = keyword_counts.get(d.keyword, 0) + 1
-
-    for keyword, count in keyword_counts.items():
-        preference_type = "like" if count >= 5 else "mention"
+    """
+    統計該 user 的所有 UserPreferenceDetail，彙總到 UserPreferenceSummary。
+    - preference_value: keyword
+    - preference_type: 若 like/dislike/restrict 次數最多則為該類型，否則為 try/mention
+    - total_score: 可用細項的 weight 總和或平均（依需求）
+    - count: like/dislike/restrict 累計次數
+    - try_count: try/mention 累計次數
+    """
+    # 先取得所有 keyword
+    keywords = UserPreferenceDetail.objects.filter(user=user).values_list('keyword', flat=True).distinct()
+    for keyword in keywords:
+        details = UserPreferenceDetail.objects.filter(user=user, keyword=keyword)
+        # 統計各類型次數
+        type_counts = details.values('preference_type').annotate(c=Count('id'))
+        type_count_map = {t['preference_type']: t['c'] for t in type_counts}
+        # 決定總表的 preference_type
+        main_type = max(type_count_map, key=type_count_map.get) if type_count_map else "mention"
+        # 計算分數
+        total_score = details.aggregate(total=Sum('weight'))['total'] or 0
+        # 正負面出現次數
+        count = details.filter(preference_type__in=['like', 'dislike', 'restrict']).count()
+        # 嘗試/提及次數
+        try_count = details.filter(preference_type__in=['try', 'mention']).count()
+        # 更新或建立總表
         UserPreferenceSummary.objects.update_or_create(
             user=user,
-            keyword=keyword,
+            preference_value=keyword,
             defaults={
-                "preference_type": preference_type,
-                "frequency": count,
+                "preference_type": main_type,
+                "total_score": total_score,
+                "count": count,
+                "try_count": try_count,
             }
         )
 
