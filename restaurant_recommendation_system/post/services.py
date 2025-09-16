@@ -1,5 +1,6 @@
 import requests
-from restaurants.models import RestaurantIndicatorDetail
+from django.db import models
+from restaurants.models import RestaurantIndicatorDetail, RestaurantIndicatorSummary
 from user.models import UserPreferenceDetail, UserPreferenceSummary
 
 def call_fastapi_analyze_restaurant(post_id, content, place_id=None):
@@ -43,9 +44,8 @@ def analyze_and_save_restaurant_indicator(post, logger=None):
     if logger:
         logger.info(f"已呼叫 FastAPI 分析餐廳指標 ID:{post.id}，結果：{result}")
     if result.get("status") == "success" and "data" in result:
-        # result["data"] 是 list of dict
         for indicator in result["data"]:
-            RestaurantIndicatorDetail.objects.update_or_create(
+            detail, created = RestaurantIndicatorDetail.objects.update_or_create(
                 source="post",
                 source_id=post.id,
                 place_id=indicator.get("place_id"),
@@ -53,6 +53,11 @@ def analyze_and_save_restaurant_indicator(post, logger=None):
                 defaults={
                     "score": indicator.get("score")
                 }
+            )
+            # 每次細項更新後，同步更新 summary
+            update_restaurant_indicator_summary(
+                place_id=indicator.get("place_id"),
+                indicator_type=indicator.get("indicator_type")
             )
     return result
 
@@ -93,3 +98,20 @@ def update_user_preference_summary(user):
                 "frequency": count,
             }
         )
+
+def update_restaurant_indicator_summary(place_id, indicator_type):
+    # 彙總所有細項
+    details = RestaurantIndicatorDetail.objects.filter(
+        place_id=place_id,
+        indicator_type=indicator_type
+    )
+    count = details.count()
+    total_score = details.aggregate(total=models.Avg('score'))['total'] or 0
+    RestaurantIndicatorSummary.objects.update_or_create(
+        place_id=place_id,
+        indicator_type=indicator_type,
+        defaults={
+            "total_score": total_score,
+            "count": count,
+        }
+    )
