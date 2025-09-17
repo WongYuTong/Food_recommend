@@ -1,0 +1,107 @@
+/**
+ * 通知系統相關的CSS樣式
+ */
+
+/* 通知項目樣式 */
+.notification-item {
+    transition: background-color 0.3s ease;
+    position: relative;
+    border-left: 3px solid transparent;
+}
+
+.notification-item.bg-light {
+    border-left-color: var(--accent-color);
+}
+
+.notification-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.notification-content {
+    display: flex;
+    align-items: flex-start;
+    flex: 1;
+}
+
+.notification-message {
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.notification-actions {
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+}
+
+.notification-item:hover .notification-actions {
+    opacity: 1;
+}
+
+/* 通知列表容器 */
+.notification-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+/* 通知圖標與徽章 */
+.notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translate(30%, -30%);
+}
+
+/* 通知鈴鐺動畫 */
+@keyframes bellShake {
+    0% { transform: rotate(0); }
+    15% { transform: rotate(5deg); }
+    30% { transform: rotate(-5deg); }
+    45% { transform: rotate(4deg); }
+    60% { transform: rotate(-4deg); }
+    75% { transform: rotate(2deg); }
+    85% { transform: rotate(-2deg); }
+    92% { transform: rotate(1deg); }
+    100% { transform: rotate(0); }
+}
+
+.nav-item .fa-bell {
+    font-size: 1.2em;
+}
+
+.nav-item:hover .fa-bell {
+    animation: bellShake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* 無通知狀態 */
+.no-notifications {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.no-notifications i {
+    font-size: 3rem;
+    color: #adb5bd;
+    margin-bottom: 1rem;
+}
+
+/* 通知類型顏色 */
+.notification-comment .notification-icon,
+.notification-reply .notification-icon {
+    color: #0d6efd;
+}
+
+.notification-follow .notification-icon {
+    color: #6f42c1;
+}
+
+.notification-favorite .notification-icon {
+    color: #fd7e14;
+}
+
+.notification-reaction .notification-icon {
+    color: #20c997;
+}
+
+.notification-system .notification-icon {
+    color: #dc3545;
+}

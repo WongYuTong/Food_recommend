@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}回報{{ report_type }} - 餐廳推薦小幫手{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0"><i class="fas fa-flag me-2 text-danger"></i>回報{{ report_type }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        請詳細說明回報原因，管理員將會審核您的回報。濫用回報功能可能導致帳號被限制。
+                    </div>
+                    
+                    {% if report_type == '貼文' %}
+                        <div class="reported-content mb-4 p-3 border rounded">
+                            <h5>回報的貼文：</h5>
+                            <div class="d-flex align-items-center mb-2">
+                                <img src="{{ reported_item.user.profile.profile_pic.url }}" alt="{{ reported_item.user.username }}" 
+                                     class="rounded-circle me-2" width="32" height="32">
+                                <div>
+                                    <strong>{{ reported_item.user.username }}</strong>
+                                    <small class="text-muted d-block">{{ reported_item.created_at|date:"Y-m-d H:i" }}</small>
+                                </div>
+                            </div>
+                            <h6>{{ reported_item.title }}</h6>
+                            <p class="text-muted">{{ reported_item.content|truncatechars:200 }}</p>
+                        </div>
+                    {% elif report_type == '評論' %}
+                        <div class="reported-content mb-4 p-3 border rounded">
+                            <h5>回報的評論：</h5>
+                            <div class="d-flex align-items-center mb-2">
+                                <img src="{{ reported_item.user.profile.profile_pic.url }}" alt="{{ reported_item.user.username }}" 
+                                     class="rounded-circle me-2" width="32" height="32">
+                                <div>
+                                    <strong>{{ reported_item.user.username }}</strong>
+                                    <small class="text-muted d-block">{{ reported_item.created_at|date:"Y-m-d H:i" }}</small>
+                                </div>
+                            </div>
+                            <p class="text-muted">{{ reported_item.content|truncatechars:200 }}</p>
+                            <small class="text-muted">在貼文：{{ reported_item.post.title }}</small>
+                        </div>
+                    {% elif report_type == '用戶' %}
+                        <div class="reported-content mb-4 p-3 border rounded">
+                            <h5>回報的用戶：</h5>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ reported_item.profile.profile_pic.url }}" alt="{{ reported_item.username }}" 
+                                     class="rounded-circle me-3" width="64" height="64">
+                                <div>
+                                    <h5 class="mb-1">{{ reported_item.username }}</h5>
+                                    {% if reported_item.profile.user_type == 'business' %}
+                                        <span class="badge bg-primary">商家</span>
+                                    {% endif %}
+                                    <p class="text-muted mb-0">{{ reported_item.profile.bio|truncatechars:100 }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ form.reason.id_for_label }}" class="form-label">回報原因</label>
+                            {{ form.reason }}
+                            {% if form.reason.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.reason.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger">提交回報</button>
+                            {% if report_type == '貼文' %}
+                                <a href="{% url 'view_post' reported_item.id %}" class="btn btn-outline-secondary">取消</a>
+                            {% elif report_type == '評論' %}
+                                <a href="{% url 'view_post' reported_item.post.id %}" class="btn btn-outline-secondary">取消</a>
+                            {% elif report_type == '用戶' %}
+                                <a href="{% url 'public_profile' reported_item.username %}" class="btn btn-outline-secondary">取消</a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

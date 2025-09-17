@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}系統公告管理 - 餐廳推薦小幫手{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col">
+            <h2><i class="fas fa-bullhorn me-2"></i>系統公告管理</h2>
+            <p class="text-muted">管理系統公告、通知和維護訊息</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'create_announcement' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i>新增公告
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-tabs mb-4" id="announcementTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">
+                        已啟用公告 <span class="badge bg-success">{{ active_announcements|length }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="inactive-tab" data-bs-toggle="tab" data-bs-target="#inactive" type="button" role="tab" aria-controls="inactive" aria-selected="false">
+                        未啟用公告 <span class="badge bg-secondary">{{ inactive_announcements|length }}</span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="announcementTabContent">
+                <!-- 已啟用公告 -->
+                <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
+                    {% if active_announcements %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>標題</th>
+                                        <th>類型</th>
+                                        <th>發布者</th>
+                                        <th>發布時間</th>
+                                        <th>有效期間</th>
+                                        <th>狀態</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for announcement in active_announcements %}
+                                    <tr>
+                                        <td>
+                                            {% if announcement.is_pinned %}
+                                                <i class="fas fa-thumbtack text-danger me-1" title="置頂公告"></i>
+                                            {% endif %}
+                                            {{ announcement.title }}
+                                        </td>
+                                        <td>
+                                            {% if announcement.announcement_type == 'system' %}
+                                                <span class="badge bg-primary">{{ announcement.get_announcement_type_display }}</span>
+                                            {% elif announcement.announcement_type == 'maintenance' %}
+                                                <span class="badge bg-warning">{{ announcement.get_announcement_type_display }}</span>
+                                            {% elif announcement.announcement_type == 'update' %}
+                                                <span class="badge bg-success">{{ announcement.get_announcement_type_display }}</span>
+                                            {% elif announcement.announcement_type == 'promotion' %}
+                                                <span class="badge bg-info">{{ announcement.get_announcement_type_display }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ announcement.get_announcement_type_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ announcement.created_by.username }}</td>
+                                        <td>{{ announcement.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            {% if announcement.start_date and announcement.end_date %}
+                                                {{ announcement.start_date|date:"Y-m-d" }} 至 {{ announcement.end_date|date:"Y-m-d" }}
+                                            {% elif announcement.start_date %}
+                                                {{ announcement.start_date|date:"Y-m-d" }} 起
+                                            {% elif announcement.end_date %}
+                                                {{ announcement.end_date|date:"Y-m-d" }} 前
+                                            {% else %}
+                                                永久
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if announcement.is_valid %}
+                                                <span class="badge bg-success">有效</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">已過期</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{% url 'edit_announcement' announcement.id %}" class="btn btn-outline-primary" title="編輯">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'toggle_announcement' announcement.id %}" class="btn btn-outline-warning" title="停用">
+                                                    <i class="fas fa-ban"></i>
+                                                </a>
+                                                <a href="{% url 'delete_announcement' announcement.id %}" class="btn btn-outline-danger" title="刪除">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>目前沒有已啟用的公告
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 未啟用公告 -->
+                <div class="tab-pane fade" id="inactive" role="tabpanel" aria-labelledby="inactive-tab">
+                    {% if inactive_announcements %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>標題</th>
+                                        <th>類型</th>
+                                        <th>發布者</th>
+                                        <th>發布時間</th>
+                                        <th>有效期間</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for announcement in inactive_announcements %}
+                                    <tr class="table-secondary">
+                                        <td>
+                                            {% if announcement.is_pinned %}
+                                                <i class="fas fa-thumbtack text-muted me-1" title="置頂公告"></i>
+                                            {% endif %}
+                                            {{ announcement.title }}
+                                        </td>
+                                        <td>
+                                            {% if announcement.announcement_type == 'system' %}
+                                                <span class="badge bg-primary">{{ announcement.get_announcement_type_display }}</span>
+                                            {% elif announcement.announcement_type == 'maintenance' %}
+                                                <span class="badge bg-warning">{{ announcement.get_announcement_type_display }}</span>
+                                            {% elif announcement.announcement_type == 'update' %}
+                                                <span class="badge bg-success">{{ announcement.get_announcement_type_display }}</span>
+                                            {% elif announcement.announcement_type == 'promotion' %}
+                                                <span class="badge bg-info">{{ announcement.get_announcement_type_display }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ announcement.get_announcement_type_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ announcement.created_by.username }}</td>
+                                        <td>{{ announcement.created_at|date:"Y-m-d H:i" }}</td>
+                                        <td>
+                                            {% if announcement.start_date and announcement.end_date %}
+                                                {{ announcement.start_date|date:"Y-m-d" }} 至 {{ announcement.end_date|date:"Y-m-d" }}
+                                            {% elif announcement.start_date %}
+                                                {{ announcement.start_date|date:"Y-m-d" }} 起
+                                            {% elif announcement.end_date %}
+                                                {{ announcement.end_date|date:"Y-m-d" }} 前
+                                            {% else %}
+                                                永久
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{% url 'edit_announcement' announcement.id %}" class="btn btn-outline-primary" title="編輯">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <a href="{% url 'toggle_announcement' announcement.id %}" class="btn btn-outline-success" title="啟用">
+                                                    <i class="fas fa-check"></i>
+                                                </a>
+                                                <a href="{% url 'delete_announcement' announcement.id %}" class="btn btn-outline-danger" title="刪除">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>目前沒有未啟用的公告
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

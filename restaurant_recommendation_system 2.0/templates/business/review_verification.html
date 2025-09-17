@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}審核商家認證申請{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-user-check me-2"></i>審核商家認證申請</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">申請資訊</h5>
+                        <div class="row mb-2">
+                            <div class="col-md-4 fw-bold">商家名稱</div>
+                            <div class="col-md-8">{{ verification.business_name }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4 fw-bold">統一編號</div>
+                            <div class="col-md-8">{{ verification.business_registration_number }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4 fw-bold">商家地址</div>
+                            <div class="col-md-8">{{ verification.business_address }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4 fw-bold">聯絡電話</div>
+                            <div class="col-md-8">{{ verification.business_phone }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4 fw-bold">電子郵件</div>
+                            <div class="col-md-8">{{ verification.business_email }}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4 fw-bold">提交者</div>
+                            <div class="col-md-8">
+                                <a href="{% url 'public_profile' verification.user.username %}" class="text-decoration-none">
+                                    {{ verification.user.username }}
+                                </a>
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-md-4 fw-bold">申請日期</div>
+                            <div class="col-md-8">{{ verification.submitted_at|date:"Y-m-d H:i" }}</div>
+                        </div>
+                        {% if verification.additional_notes %}
+                        <div class="row mb-2">
+                            <div class="col-md-4 fw-bold">附加資訊</div>
+                            <div class="col-md-8">{{ verification.additional_notes }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="border-bottom pb-2">認證文件</h5>
+                        {% if verification.registration_document %}
+                        <div class="text-center mb-3">
+                            <a href="{{ verification.registration_document.url }}" class="btn btn-outline-secondary" target="_blank">
+                                <i class="fas fa-file-alt me-2"></i>查看營業登記文件
+                            </a>
+                        </div>
+                        <div class="embed-responsive embed-responsive-1by1">
+                            <iframe class="embed-responsive-item" src="{{ verification.registration_document.url }}" style="width: 100%; height: 500px;"></iframe>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>未上傳認證文件
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="review_notes" class="form-label">審核備註</label>
+                            <textarea id="review_notes" name="review_notes" class="form-control" rows="4"></textarea>
+                            <div class="form-text">請提供審核意見或備註，將顯示給商家參考</div>
+                        </div>
+                        
+                        <div class="d-flex gap-2 mb-3">
+                            <button type="submit" name="action" value="approve" class="btn btn-success">
+                                <i class="fas fa-check-circle me-2"></i>批准認證
+                            </button>
+                            <button type="submit" name="action" value="reject" class="btn btn-danger">
+                                <i class="fas fa-times-circle me-2"></i>拒絕認證
+                            </button>
+                            <a href="{% url 'admin_verification_list' %}" class="btn btn-secondary ms-auto">
+                                <i class="fas fa-arrow-left me-2"></i>返回列表
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

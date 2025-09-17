@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}處理回報 #{{ report.id }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0"><i class="fas fa-flag me-2 text-danger"></i>處理回報 #{{ report.id }}</h3>
+                    <span class="badge {% if report.status == 'pending' %}bg-danger{% elif report.status == 'processing' %}bg-warning{% elif report.status == 'resolved' %}bg-success{% elif report.status == 'rejected' %}bg-secondary{% endif %}">
+                        {{ report.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>回報資訊</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>回報類型：</strong> {{ report.get_report_type_display }}</li>
+                                <li><strong>回報時間：</strong> {{ report.created_at|date:"Y-m-d H:i" }}</li>
+                                <li><strong>回報者：</strong> {{ report.reporter.username }}</li>
+                                <li><strong>被回報者：</strong> {{ report.reported_user.username }}</li>
+                            </ul>
+                        </div>
+                        
+                        {% if report.status != 'pending' %}
+                        <div class="col-md-6">
+                            <h5>處理資訊</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>處理者：</strong> {{ report.handled_by.username }}</li>
+                                <li><strong>處理時間：</strong> {{ report.handled_at|date:"Y-m-d H:i" }}</li>
+                                <li><strong>處理結果：</strong> {{ report.get_status_display }}</li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>回報原因</h5>
+                        <div class="p-3 bg-light rounded">
+                            {{ report.reason|linebreaks }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>回報內容</h5>
+                        <div class="p-3 border rounded">
+                            {% if report.report_type == 'post' and report.post %}
+                                <div class="reported-content">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img src="{{ report.post.user.profile.profile_pic.url }}" alt="{{ report.post.user.username }}" 
+                                             class="rounded-circle me-2" width="32" height="32">
+                                        <div>
+                                            <strong>{{ report.post.user.username }}</strong>
+                                            <small class="text-muted d-block">{{ report.post.created_at|date:"Y-m-d H:i" }}</small>
+                                        </div>
+                                    </div>
+                                    <h6>{{ report.post.title }}</h6>
+                                    <p>{{ report.post.content|linebreaks }}</p>
+                                    {% if report.post.image %}
+                                        <img src="{{ report.post.image.url }}" alt="{{ report.post.title }}" class="img-fluid rounded mb-3" style="max-height: 300px;">
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        <a href="{% url 'view_post' report.post.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i> 查看貼文
+                                        </a>
+                                    </div>
+                                </div>
+                            {% elif report.report_type == 'comment' and report.comment %}
+                                <div class="reported-content">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img src="{{ report.comment.user.profile.profile_pic.url }}" alt="{{ report.comment.user.username }}" 
+                                             class="rounded-circle me-2" width="32" height="32">
+                                        <div>
+                                            <strong>{{ report.comment.user.username }}</strong>
+                                            <small class="text-muted d-block">{{ report.comment.created_at|date:"Y-m-d H:i" }}</small>
+                                        </div>
+                                    </div>
+                                    <p>{{ report.comment.content|linebreaks }}</p>
+                                    <div class="mt-2">
+                                        <a href="{% url 'view_post' report.comment.post.id %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i> 查看貼文與評論
+                                        </a>
+                                    </div>
+                                </div>
+                            {% elif report.report_type == 'user' and report.reported_user %}
+                                <div class="reported-content">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ report.reported_user.profile.profile_pic.url }}" alt="{{ report.reported_user.username }}" 
+                                             class="rounded-circle me-3" width="64" height="64">
+                                        <div>
+                                            <h5 class="mb-1">{{ report.reported_user.username }}</h5>
+                                            {% if report.reported_user.profile.user_type == 'business' %}
+                                                <span class="badge bg-primary">商家</span>
+                                            {% endif %}
+                                            <p class="text-muted mb-0">{{ report.reported_user.profile.bio|truncatechars:100 }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <a href="{% url 'public_profile' report.reported_user.username %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt me-1"></i> 查看用戶資料
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if report.status == 'pending' or report.status == 'processing' %}
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="admin_notes" class="form-label">管理員備註</label>
+                            <textarea name="admin_notes" id="admin_notes" rows="4" class="form-control">{{ report.admin_notes }}</textarea>
+                        </div>
+                        
+                        {% if report.report_type == 'post' or report.report_type == 'comment' %}
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="delete_content" name="delete_content" value="yes">
+                            <label class="form-check-label" for="delete_content">
+                                同時刪除相關{{ report.get_report_type_display }}
+                            </label>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="action" value="resolve" class="btn btn-success">
+                                <i class="fas fa-check me-1"></i> 解決回報
+                            </button>
+                            <button type="submit" name="action" value="reject" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> 拒絕回報
+                            </button>
+                            <button type="submit" name="action" value="processing" class="btn btn-warning">
+                                <i class="fas fa-clock me-1"></i> 標記為處理中
+                            </button>
+                            <a href="{% url 'admin_reports' %}" class="btn btn-outline-secondary ms-auto">
+                                <i class="fas fa-arrow-left me-1"></i> 返回列表
+                            </a>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="mb-3">
+                        <h5>管理員備註</h5>
+                        <div class="p-3 bg-light rounded">
+                            {{ report.admin_notes|default:"無備註"|linebreaks }}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex">
+                        <a href="{% url 'admin_reports' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> 返回列表
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
