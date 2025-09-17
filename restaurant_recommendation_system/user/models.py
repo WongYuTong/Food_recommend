@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+# 使用者個人資料擴展
 class Profile(models.Model):
     USER_TYPE_CHOICES = (
         ('general', '一般使用者'),
@@ -35,6 +36,7 @@ class Profile(models.Model):
     def is_admin(self):
         return self.user_type == 'admin'
 
+# 系統公告
 class Announcement(models.Model):
     """系統公告模型，用於管理員發布重要通知"""
     ANNOUNCEMENT_TYPES = (
@@ -79,6 +81,7 @@ class Announcement(models.Model):
         
         return self.is_active and is_after_start and is_before_end
 
+# 貼文與留言
 class Post(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
@@ -96,6 +99,7 @@ class Post(models.Model):
     def __str__(self):
         return self.title
 
+# 用戶收藏的貼文
 class FavoritePost(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='favorited_by')
@@ -109,6 +113,7 @@ class FavoritePost(models.Model):
     def __str__(self):
         return f'{self.user.username} favorited {self.post.title}'
 
+# 用戶收藏餐廳
 class FavoriteRestaurant(models.Model):
     """用戶收藏的餐廳"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_restaurants')
@@ -130,6 +135,7 @@ class FavoriteRestaurant(models.Model):
     def __str__(self):
         return f'{self.user.username} favorited restaurant: {self.restaurant_name}'
 
+# 追蹤收藏
 class Follow(models.Model):
     follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following')
     followed = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers')
@@ -143,6 +149,8 @@ class Follow(models.Model):
     def __str__(self):
         return f'{self.follower.username} follows {self.followed.username}'
 
+
+# 商家身份驗證申請
 class BusinessVerification(models.Model):
     """商家身份驗證申請"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='verification_requests')
@@ -162,6 +170,7 @@ class BusinessVerification(models.Model):
     def __str__(self):
         return f'{self.business_name} - {self.get_status_display()}'
 
+# 用戶對貼文的評論
 class Comment(models.Model):
     """用戶對貼文的評論"""
     post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='comments')
@@ -184,6 +193,7 @@ class Comment(models.Model):
         """判斷是否為回覆評論"""
         return self.parent is not None
 
+# 用戶對貼文的表情符號反應
 class Reaction(models.Model):
     """用戶對貼文的表情符號反應"""
     REACTION_CHOICES = (
@@ -207,6 +217,7 @@ class Reaction(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.get_reaction_type_display()} - {self.post.title}"
 
+# 用戶通知系統
 class Notification(models.Model):
     """用戶通知系統"""
     NOTIFICATION_TYPES = (
@@ -237,7 +248,8 @@ class Notification(models.Model):
         """標記通知為已讀"""
         self.is_read = True
         self.save()
-        
+
+# 用戶回報系統
 class Report(models.Model):
     """用戶回報系統"""
     REPORT_TYPES = (

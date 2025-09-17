@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from .models import UserPreferenceDetail, Message, SavedPlace
 from .tools import LLMFactory
 from user.models import Post as UserPost, FavoritePost
+# 整理/讀寫使用者偏好
 
 class PreferenceService:
     """用戶偏好服務類，用於處理偏好的提取、存儲和檢索"""
