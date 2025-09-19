@@ -17,7 +17,7 @@ type_mapping = {"like": "喜歡", "dislike": "不喜歡"}
 reverse_mapping = {"喜歡": "like", "不喜歡": "dislike"}
 
 # 用於偵測刪除偏好的關鍵字
-DELETE_KEYWORDS = ["不喜歡", "不要", "不想吃", "刪掉", "移除", "取消"]
+DELETE_KEYWORDS = ["刪掉", "移除", "取消", "不要再", "不需要"]
 
 
 # ---------------- 推薦餐廳 ----------------

@@ -16,10 +16,10 @@ def parse_preference_from_text(text: str):
     }
 
     # 關鍵字分類
-    long_like_keywords = ["喜歡", "愛吃", "偏好", "要吃"]
-    long_dislike_keywords = ["不喜歡", "不吃", "討厭"]
-    short_like_keywords = ["今天想吃", "現在想吃", "暫時想吃", "今天要吃"]
-    short_dislike_keywords = ["今天不想吃", "不想吃", "現在不吃"]
+    long_like_keywords = ["喜歡", "愛吃", "要吃"]  # 移除「偏好」
+    long_dislike_keywords = ["不喜歡", "不吃", "討厭", "不要", "不想要"]
+    short_like_keywords = ["今天想吃", "現在想吃"]  # 移除「暫時想吃」「今天要吃」
+    short_dislike_keywords = ["今天不想吃", "不想吃"]  # 移除「現在不吃」
 
     # 解析函數
     def extract_items(patterns, text):
