@@ -226,8 +226,25 @@ GUIDANCE_TEST_INPUTS = [
         "text": "我想吃重口味的麻辣鍋",
         "expected_levels": ["飲食狀態"],
         "expected_keywords": ["重口味", "麻辣"]
-    }
+    },
+    {
+        "text": "我想要氣氛好一點，而且不要太遠",
+        "expected_levels": ["情境偏好"],
+        "expected_keywords": ["氣氛", "距離"]
+    },
+    {
+        "text": "我不吃辣，也不想吃太貴",
+        "expected_levels": ["飲食偏好", "預算"],
+        "expected_keywords": ["辣味", "不貴"]
+    },
+    {
+        "text": "環境要舒適，吃飽也不會太貴",
+        "expected_levels": ["情境偏好", "預算"],
+        "expected_keywords": ["舒適", "不貴"]
+    },
+
 ]
+
 
 
 # --- 整合測試用句子（擴充版 schema；與舊版相容） ---
