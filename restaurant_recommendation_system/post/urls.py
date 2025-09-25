@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = 'post'  # ← 新增這一行
+
 urlpatterns = [
     path('new/', views.create_post, name='create_post'),
     path('history/', views.post_history, name='post_history'),
