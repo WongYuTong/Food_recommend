@@ -243,6 +243,7 @@ class UserPreferenceDetail(models.Model):
         ("dislike", "不喜歡"),
         ("restrict", "禁忌"),
         ("try", "嘗試"),
+        ("mention", "提及"),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="preference_details")
     keyword = models.CharField(max_length=50, default="", help_text='偏好，例如「甜」「辣」「不吃牛」')
